@@ -1,11 +1,13 @@
 #!/usr/bin/env python
+from vision import detected_colored_object, get_robot_position_from_camera
+
 __TODDLER_VERSION__ = "1.0.0"
 
 import datetime
 import time
 
 import cv2
-import numpy
+import numpy as np
 
 
 # Hardware test code
@@ -14,6 +16,11 @@ class Toddler:
         print('I am a toddler playing in a sandbox')
         self.IO = IO
         self.inp = [0, 0, 0, 0, 0, 0, 0, 0]
+        self._poi_color_lower_range = np.array([169, 100, 100], dtype=np.uint8)
+        self._poi_color_upper_range = np.array([189, 255, 255], dtype=np.uint8)
+        self._satellite_pose = (np.array([0, 0, 0], dtype=np.float32), np.array([0, 0], dtype=np.float32))
+        self._poi_detected = False
+        self._position_from_camera = None
 
     def move(self, l, r):
         if not l and not r:
@@ -25,21 +32,26 @@ class Toddler:
         if l and r:
             return [100, 100]
 
+    def _change_antenna_position(self):
+        pass
 
-            # This is a callback that will be called repeatedly.
+    def sense(self):
+        pass
 
-    # It has its dedicated thread so you can keep block it.
-    def Control(self, OK):
-        mot = [False, False, False]
-        motPrev = [False, False, False]
-        pos = 180
-        while OK():
-            time.sleep(0.05)
+    def plan(self):
+        pass
+
+    def act(self, mot, mot_prev, pos):
+
+        # detected POI, set up the antenna orientation towards the satellite
+        if self._poi_detected:
+            self._change_antenna_position()
+        else:
             self.inp = self.IO.getInputs()
-            mot[0] = self.inp[1]
             mot[1] = self.inp[2]
+            mot[0] = self.inp[1]
             mot[2] = self.inp[3]
-            if mot[0] != motPrev[0] or mot[1] != motPrev[1]:
+            if mot[0] != mot_prev[0] or mot[1] != mot_prev[1]:
                 speed = self.move(mot[0], mot[1])
                 self.IO.setMotors(-speed[0], speed[1])
                 if mot[0]:
@@ -55,11 +67,20 @@ class Toddler:
                 self.IO.servoEngage()
                 pos = (pos + 3) % 360
                 self.IO.servoSet(abs(pos - 180))
-            if mot[2] != motPrev[2] and not mot[2]:
+            if mot[2] != mot_prev[2] and not mot[2]:
                 self.IO.servoDisengage()
-            motPrev[0] = mot[0]
-            motPrev[1] = mot[1]
-            motPrev[2] = mot[2]
+            mot_prev[0] = mot[0]
+            mot_prev[1] = mot[1]
+            mot_prev[2] = mot[2]
+
+    # It has its dedicated thread so you can keep block it.
+    def Control(self, OK):
+        mot = [False, False, False]
+        motPrev = [False, False, False]
+        pos = 180
+        while OK():
+            time.sleep(0.05)
+            self.act(mot, motPrev, pos)
 
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
@@ -74,31 +95,12 @@ class Toddler:
                 for i in range(0, 5):
                     self.IO.cameraGrab()
                 img = self.IO.cameraRead()
-                if img.__class__ == numpy.ndarray:
-                    hasImage = True
-                    cv2.imwrite('camera-' + datetime.datetime.now().isoformat() + '.png', img)
-                    self.IO.imshow('window', img)
-                    self.IO.setStatus('flash', cnt=2)
-                    time.sleep(0.5)
-            if hasImage:
-                self.IO.imshow('window', img)
+                self._poi_detected = detected_colored_object(
+                    img,
+                    self._poi_color_lower_range,
+                    self._poi_color_upper_range
+                )
 
-            sw = self.inp[5]
-            if sw != swPrev and sw:
-                res = (res + 1) % 4
-                if res == 0:
-                    self.IO.cameraSetResolution('low')
-                    self.IO.setError('flash', cnt=1)
-                if res == 1:
-                    self.IO.cameraSetResolution('medium')
-                    self.IO.setError('flash', cnt=2)
-                if res == 2:
-                    self.IO.cameraSetResolution('high')
-                    self.IO.setError('flash', cnt=3)
-                if res == 3:
-                    self.IO.cameraSetResolution('full')
-                    self.IO.setError('flash', cnt=4)
-                time.sleep(0.5)
-            swPrev = sw
+                self._position_from_camera = get_robot_position_from_camera(img)
 
             time.sleep(0.05)
