@@ -3,10 +3,8 @@ from vision import detected_colored_object, get_robot_position_from_camera
 
 __TODDLER_VERSION__ = "1.0.0"
 
-import datetime
 import time
 
-import cv2
 import numpy as np
 
 
@@ -95,12 +93,13 @@ class Toddler:
                 for i in range(0, 5):
                     self.IO.cameraGrab()
                 img = self.IO.cameraRead()
-                self._poi_detected = detected_colored_object(
+                cnts, coms = detected_colored_object(
                     img,
                     self._poi_color_lower_range,
                     self._poi_color_upper_range
                 )
 
+                self._poi_detected = cnts is not None and coms is not None
                 self._position_from_camera = get_robot_position_from_camera(img)
 
             time.sleep(0.05)
