@@ -21,7 +21,7 @@ class Toddler:
         self._satellite_pose = (np.array([0, 0, 0], dtype=np.float32), np.array([0, 0], dtype=np.float32))
         self._poi_detected = False
         self._position_from_camera = None
-
+        
     def move(self, l, r):
         if not l and not r:
             return [0, 0]
@@ -36,9 +36,9 @@ class Toddler:
         pass
 
     def sense(self):
-        pass
+        return self.IO.getInputs()
 
-    def plan(self):
+    def plan(self, state):
         pass
 
     def act(self, mot, mot_prev, pos):
