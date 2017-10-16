@@ -23,3 +23,11 @@ class Motors:
 			self.IO.setMotors(old_state)
 			self.current_state = old_state
 
+	def enable_servo(self):
+		self.IO.servoEngage()
+		time.sleep(1)
+		print('Servo Engaged!')
+
+	def set_servo(self, angle):
+		self.IO.servoSet(angle)
+		time.sleep(0.2)
