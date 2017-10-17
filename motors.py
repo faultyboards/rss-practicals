@@ -16,12 +16,15 @@ class Motors:
 		self.servo_seconds_per_degree = 0.02
 		self.last_servo_change = None
 
+		self.motions = {'forward': (100, 100), 'backward': (-100, -100),
+						'right': (100, -100), 'left': (-100, 100)}
+
 	def apply_mult(self, motor_setting):
 		return (self.motor_pwr_multiplier[0]*motor_setting[0], \
 			self.motor_pwr_multiplier[1]*motor_setting[1])
 
-	def full_forward(self, how_long=None):
-		fullon = self.apply_mult((100, 100))
+	def full_on(self, motion='forward', how_long=None):
+		fullon = self.apply_mult(self.motions[motion])
 		self.IO.setMotors(fullon)
 		old_state = self.current_state
 		self.current_state = fullon
