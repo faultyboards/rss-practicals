@@ -50,23 +50,24 @@ def vision_test():
     cv2.destroyAllWindows()
 
 
-class OpticalFlow():
+class OpticalFlow:
     '''
     A device used to extract information about angular displacement of the robot
     by performing very rudimentary optical flow on the centre of the image.
     ''' 
-    def __init__(self, cap):
-        # The VideoCapture opject shared by all the vision agents
-        self.cap = cap 
+    def __init__(self, IO):
+        # The IO object for reading from the camera
+        self.IO = IO
+
         # A structure meant to hold information extracted from the last image
-        self.last_centre = {'img': None, 'timestamp': None}
+        self.last_centre = {'img': None, 'timestamp': 0}
 
         # Determines how small is the central region we convolute
-        self.cropping_ratio
+        self.crop_ratio = 4
 
         # Setting this enables operating on smaller resolution camera images if
         # performance is unsatisfactory
-        self.downscaling_ratio = 1
+        self.downscaling_ratio = 4
 
         # Method used for cross-convolution
         self.ccv_method = cv2.TM_CCOEFF
@@ -81,31 +82,44 @@ class OpticalFlow():
         '''
 
         # Capture a new image and extract it's centre for next 'snap's use
-        ret, frame = self.cap.read()
-        time_elapsed = time.time() - self.last_centre['timestamp'] 
+        self.IO.cameraGrab()
+        frame = self.IO.cameraRead()
+
+        time_elapsed = time.time() - self.last_centre['timestamp']
         self.last_centre['timestamp'] += time_elapsed
+        ang_disp_pix = None
 
+        # Figure out sizes of everything
         img_w, img_h, dimmmm = frame.shape
-        img_sh = np.array([img_w, img_h])
-        crop_sh = img_sh/crop_ratio
-        res_sh = img_sh-crop_sh+1
-
+        img_sh = np.array([img_h, img_w])
         frame = frame
         if self.downscaling_ratio > 1:
             dwnscld_frame = cv2.resize(frame, np2tpl(img_sh/self.downscaling_ratio)) 
+            dwnscld_sh = img_sh/self.downscaling_ratio
+        else:
+            dwnscld_frame = frame
+            dwnscld_sh = img_sh
+
+        crop_sh = dwnscld_sh/self.crop_ratio
+        res_sh = dwnscld_sh-crop_sh+1
+        zero_movement_pt = {4: res_sh/2+np.array([-6,5])}
 
         if self.last_centre['img'] is not None:
             # Estimate the angular displacement since the last call.
-            res = cv2.matchTemplate(dwnscld_frame, self.last_centre['img'], method)
+            res = cv2.matchTemplate(dwnscld_frame, self.last_centre['img'], self.ccv_method)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            ang_disp_pix = (max_loc[0]-zero_movement_pt[crop_ratio][0], max_loc[1]-zero_movement_pt[crop_ratio][1])
+            ang_disp_pix = tpl2np(max_loc) - zero_movement_pt[self.crop_ratio]
 
-            # Crop the centre of this image for future use
-            from_coords = (img_sh-crop_sh)/2
-            to_coords = img_sh-(img_sh-crop_sh)/2
-            self.last_centre['img'] = dwnscld_frame[from_coords[0]:to_coords[0],from_coords[0]:to_coords[1]]
+        # Crop the centre of this image for future use
+        from_coords = (dwnscld_sh-crop_sh)/2
+        to_coords = dwnscld_sh-(dwnscld_sh-crop_sh)/2
 
-        return {'displacement': ang_disp_pix*self.ang_disp_coef, 'time_elapsed': time_elapsed}
+        self.last_centre['img'] = dwnscld_frame[from_coords[1]:to_coords[1],from_coords[0]:to_coords[0]]
+
+        if ang_disp_pix is not None:
+            return {'displacement': ang_disp_pix*self.ang_disp_coef, 'time_elapsed': time_elapsed}
+        else:
+            return None
 
 if __name__ == "__main__":
     vision_test()
