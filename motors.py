@@ -3,11 +3,18 @@ import time
 class Motors:
 	def __init__(self, IO):
 		self.IO = IO
-		self.initial_state = (0, 0)
-		self.current_state = self.initial_state
+		self.state = {'DC': {}, 'servo': {}}
+		self.state['DC']['initial'] = (0, 0)
+		self.state['servo']['initial'] = 0
+		self.state['DC']['current'] = self.state['DC']['initial']
+		self.state['servo']['current'] = self.state['servo']['initial']
+		self.state['servo']['engaged'] = False
 
 		# Setup constants
 		self.motor_pwr_multiplier = (1, 1)
+
+		self.servo_seconds_per_degree = 0.02
+		self.last_servo_change = None
 
 	def apply_mult(self, motor_setting):
 		return (self.motor_pwr_multiplier[0]*motor_setting[0], \
@@ -25,9 +32,18 @@ class Motors:
 
 	def enable_servo(self):
 		self.IO.servoEngage()
-		time.sleep(1)
+		self.state['servo']['engaged'] = True
+		time.sleep(0.5)
+		self.set_servo(self.state['servo']['initial'])
+		time.sleep(2)
 		print('Servo Engaged!')
 
 	def set_servo(self, angle):
-		self.IO.servoSet(angle)
-		time.sleep(0.2)
+		if self.state['servo']['engaged']:
+			self.IO.servoSet(angle)
+			# block for a time proportional to the angle we need to turn
+			time.sleep(abs(angle-self.state['servo']['current']) * self.servo_seconds_per_degree):
+				pass
+			self.state['servo']['current'] = angle
+		else:
+			raise Exception('Servo was not engaged!')
