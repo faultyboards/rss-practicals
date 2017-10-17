@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import numpy as np
-import pdb
+
 '''
 This module is meant for generating the arena grid as well as calculating
 the priors P(sensor|position) for each occupiable field in the grid.
@@ -11,10 +11,10 @@ It leaves the grid file as a pickle
 
 class Grid():
 	# Set the size of grid cells and the number of allowed orientations
-	cell_size = 0.07
+	cell_size = 0.20
 	angle_res = 12
 	# Set resolution for sensor readings simulation
-	simulation_res = 2
+	simulation_res = 0.02
 	# Set the number of rays used when simulating sensor readings 
 	raytracing_res = 10
 
