@@ -18,6 +18,7 @@ class Toddler:
         self.IO = IO
         self.sensors = Sensors(self.IO)
         self.motors = Motors(self.IO)
+        self.opt_flw = OpticalFlow(self.IO)
 
     # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
@@ -27,5 +28,11 @@ class Toddler:
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
     def Vision(self, OK):
+        self.opt_flw.snap()
+        cumul = 0
         while OK():
-            pass
+            res = self.opt_flw.snap()
+            cumul += res['displacement']
+            print('dx: {}\tfreq: {}Hz\tdrift: {}'.format(res['displacement'],
+                                                         1/res['time_elapsed'],
+                                                         cumul))

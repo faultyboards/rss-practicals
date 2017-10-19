@@ -102,11 +102,18 @@ class OpticalFlow:
 
         crop_sh = dwnscld_sh/self.crop_ratio
         res_sh = dwnscld_sh-crop_sh+1
-        zero_movement_pt = {4: res_sh/2+np.array([-6,5])}
+        zero_movement_pt = {4: res_sh/2+np.array([19,13])}
 
         if self.last_centre['img'] is not None:
             # Estimate the angular displacement since the last call.
             res = cv2.matchTemplate(dwnscld_frame, self.last_centre['img'], self.ccv_method)
+            # detector = cv2.SimpleBlobDetector()
+            # keypoints = detector.detect(res)
+            # print(keypoints)
+            self.IO.imshow('frame',frame)
+            self.IO.imshow('dwnscld_frame',dwnscld_frame)
+            self.IO.imshow('self.last_centre[\'img\']',self.last_centre['img'])
+            self.IO.imshow('res',res)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
             ang_disp_pix = tpl2np(max_loc) - zero_movement_pt[self.crop_ratio]
 
