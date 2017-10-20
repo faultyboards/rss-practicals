@@ -27,6 +27,8 @@ class Sensors:
 		# Fix sonar resolution
 		self.IO._interfaceKit.setSensorChangeTrigger(sensorID,0)
 
+		self.default_to_raw = False
+
 	def update_readings(self, type='both'):
 		if type == 'analogue' or type == 'both':
 			self.analogue_readings = self.IO.getSensors()
@@ -45,19 +47,19 @@ class Sensors:
 		else:
 			return self.digital_readings[self.port['switch'][switch_no]]
 
-	def get_sonar(self, raw=False):
+	def get_sonar(self, raw=self.default_to_raw):
 		if not raw:
 			return self.analogue_readings[self.port['sonar']]*self.sonar_dist_mltpl
 		else:
 			return self.analogue_readings[self.port['sonar']]
 
-	def get_ir(self, sensor_loc, raw=False):
+	def get_ir(self, sensor_loc, raw=self.default_to_raw):
 		if not raw:
 			return self.analogue_readings[self.port['ir'][sensor_loc]]*self.ir_dist_mltpl
 		else:
 			return self.analogue_readings[self.port['ir'][sensor_loc]]
 
-	def get_light(self, sensor_loc, kind=False):
+	def get_light(self, sensor_loc, kind=self.default_to_raw):
 		if kind:
 			return self.analogue_readings[self.port['light'][sensor_loc]] < self.light_threshold[kind]
 		else:
