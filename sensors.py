@@ -11,8 +11,8 @@ class Sensors:
 
 		# analogue sensors
 		self.port['sonar'] = 0
-		self.port['light'] = [1, 2, 3, 4]
-		self.port['ir'] = [5, 6]
+		self.port['light'] = {'front': 1, 'rear': 2, 'left': 3, 'right': 4}
+		self.port['ir'] = {'left': 5, 'right': 6}
 
 		# define thresholds / multipliers for analogue sensors
 		self.whskr_on_state = {'left': 1, 'right': 1}
@@ -51,16 +51,16 @@ class Sensors:
 		else:
 			return self.analogue_readings[self.port['sonar']]
 
-	def get_ir(self, sensor_no, raw=False):
+	def get_ir(self, sensor_loc, raw=False):
 		if not raw:
-			return self.analogue_readings[self.port['ir'][sensor_no]]*self.ir_dist_mltpl
+			return self.analogue_readings[self.port['ir'][sensor_loc]]*self.ir_dist_mltpl
 		else:
-			return self.analogue_readings[self.port['ir'][sensor_no]]
+			return self.analogue_readings[self.port['ir'][sensor_loc]]
 
-	def get_light(self, sensor_no, kind=False):
+	def get_light(self, sensor_loc, kind=False):
 		if kind:
-			return self.analogue_readings[self.port['light'][sensor_no]] < self.light_threshold[kind]
+			return self.analogue_readings[self.port['light'][sensor_loc]] < self.light_threshold[kind]
 		else:
-			return self.analogue_readings[self.port['light'][sensor_no]]
+			return self.analogue_readings[self.port['light'][sensor_loc]]
 
 
