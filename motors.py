@@ -45,8 +45,7 @@ class Motors:
 		if self.state['servo']['engaged']:
 			self.IO.servoSet(angle)
 			# block for a time proportional to the angle we need to turn
-			time.sleep(abs(angle-self.state['servo']['current']) * self.servo_seconds_per_degree):
-				pass
+			time.sleep(abs(angle-self.state['servo']['current']) * self.servo_seconds_per_degree)
 			self.state['servo']['current'] = angle
 		else:
 			raise Exception('Servo was not engaged!')
