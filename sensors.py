@@ -24,6 +24,9 @@ class Sensors:
 		self.analogue_readings = self.IO.getSensors()
 		self.digital_readings = self.IO.getInputs()
 
+		# Fix sonar resolution
+		self.IO._interfaceKit.setSensorChangeTrigger(sensorID,0)
+
 	def update_readings(self, type='both'):
 		if type == 'analogue' or type == 'both':
 			self.analogue_readings = self.IO.getSensors()
