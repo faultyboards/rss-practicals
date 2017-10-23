@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 __IOTOOLS_VERSION__="1.0.0"
 
-from Phidgets.PhidgetException import PhidgetErrorCodes, PhidgetException
+import threading
+import time
+import os
+
+from Phidgets.PhidgetException import PhidgetException
 from Phidgets.Devices.InterfaceKit import InterfaceKit
 from Phidgets.Devices.MotorControl import MotorControl
 from Phidgets.Devices.AdvancedServo import AdvancedServo
 from Phidgets.Devices.Servo import ServoTypes
-import threading
-import time
 import cv2
 import numpy
-import os
+
 
 class IOTools:
     def __init__(self, onRobot):

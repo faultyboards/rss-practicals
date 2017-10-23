@@ -10,10 +10,9 @@ class Motors:
         self.state['DC']['current'] = self.state['DC']['initial']
         self.state['servo']['current'] = self.state['servo']['initial']
         self.state['servo']['engaged'] = False
-        self.current_state = None
 
         # Setup constants
-        self.motor_pwr_multiplier = (1, 1)
+        self.motor_pwr_multiplier = (1, -1)
 
         self.servo_seconds_per_degree = 0.02
         self.last_servo_change = None
@@ -27,18 +26,18 @@ class Motors:
 
     def full_on(self, motion='forward', how_long=None):
         fullon = self.apply_mult(self.motions[motion])
-        self.IO.setMotors(fullon)
-        old_state = self.current_state
-        self.current_state = fullon
+        self.IO.setMotors(fullon[0], fullon[1])
+        old_state = self.state['DC']['current']
+        self.state['DC']['current'] = fullon
         if how_long is not None:
             time.sleep(how_long)
-            self.IO.setMotors(old_state)
-            self.current_state = old_state
+            self.IO.setMotors(old_state[0], old_state[1])
+            self.state['DC']['current'] = old_state
 
     def stop(self):
-        self.IO.setMotors((0, 0))
+        self.IO.setMotors(0, 0)
         time.sleep(2)
-        self.current_state = (0, 0)
+        self.state['DC']['current'] = (0, 0)
 
     def enable_servo(self):
         self.IO.servoEngage()
