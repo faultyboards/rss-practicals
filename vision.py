@@ -63,7 +63,7 @@ class OpticalFlow:
         self.last_centre = {'img': None, 'timestamp': 0}
 
         # Determines how small is the central region we convolute
-        self.crop_ratio = 4
+        self.crop_ratio = 1.5
 
         # Setting this enables operating on smaller resolution camera images if
         # performance is unsatisfactory
@@ -71,6 +71,11 @@ class OpticalFlow:
 
         # Method used for cross-convolution
         self.ccv_method = cv2.TM_CCOEFF
+        # self.ccv_method = cv2.TM_CCOEFF_NORMED
+        # self.ccv_method = cv2.TM_CCORR
+        # self.ccv_method = cv2.TM_CCORR_NORMED
+        # self.ccv_method = cv2.TM_SQDIFF
+        # self.ccv_method = cv2.TM_SQDIFF_NORMED
 
         # Angular displacement coefficient for converting from pixel data
         self.ang_disp_coef = 1 # TODO callibrate
@@ -94,28 +99,31 @@ class OpticalFlow:
         img_sh = np.array([img_h, img_w])
         frame = frame
         if self.downscaling_ratio > 1:
-            dwnscld_frame = cv2.resize(frame, np2tpl(img_sh/self.downscaling_ratio)) 
             dwnscld_sh = img_sh/self.downscaling_ratio
+            dwnscld_frame = cv2.resize(frame, np2tpl(dwnscld_sh))
         else:
             dwnscld_frame = frame
             dwnscld_sh = img_sh
 
         crop_sh = dwnscld_sh/self.crop_ratio
         res_sh = dwnscld_sh-crop_sh+1
-        zero_movement_pt = {4: res_sh/2+np.array([19,13])}
+        zero_movement_pt = {4:  res_sh/2+np.array([19,13]),
+                            1.5: res_sh/2+np.array([-162/6,-20.5])}
 
         if self.last_centre['img'] is not None:
             # Estimate the angular displacement since the last call.
             res = cv2.matchTemplate(dwnscld_frame, self.last_centre['img'], self.ccv_method)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
             # detector = cv2.SimpleBlobDetector()
             # keypoints = detector.detect(res)
             # print(keypoints)
-            self.IO.imshow('frame',frame)
-            self.IO.imshow('dwnscld_frame',dwnscld_frame)
-            self.IO.imshow('self.last_centre[\'img\']',self.last_centre['img'])
-            self.IO.imshow('res',res)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            # self.IO.imshow('frame',frame)
+            # self.IO.imshow('dwnscld_frame',dwnscld_frame)
+            # self.IO.imshow('self.last_centre[\'img\']',self.last_centre['img'])
+            # self.IO.imshow('res',(res-min_val)/(max_val-min_val))
             ang_disp_pix = tpl2np(max_loc) - zero_movement_pt[self.crop_ratio]
+            # ang_disp_pix = tpl2np(max_loc)
+            print(zero_movement_pt[self.crop_ratio])
 
         # Crop the centre of this image for future use
         from_coords = (dwnscld_sh-crop_sh)/2
