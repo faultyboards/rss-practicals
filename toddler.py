@@ -34,12 +34,11 @@ class Toddler:
                   {'type': 'ir', 'meas1': ['straight', '40deg'], 'meas2': ['5cm', '10cm', '20cm', '50cm', '80cm', '100cm', '120cm'], 'locations': ['left', 'right']}]
 
         self.sensors.default_to_raw = True
-
         with open(log_file, 'w') as f:
             for sensor in script:
                 self.tee('\nEvaluating {}:\n'.format(sensor['type']), f)
                 callfunction = eval('self.sensors.get_{}'.format(sensor['type']))
-                readings = []
+                readings = [None, None, None]
 
                 for location in sensor['locations']:
                     self.tee('\nlocation {}:\n'.format(location), f)
@@ -56,7 +55,7 @@ class Toddler:
                             for reading_no in range(3):
                                 self.sensors.update_readings()
                                 if len(sensor['locations']) > 1:
-                                    readings[reading_no] = callfunction(sensor['locations'])
+                                    readings[reading_no] = callfunction(location)
                                 else:
                                     readings[reading_no] = callfunction()
                                 time.sleep(1)
