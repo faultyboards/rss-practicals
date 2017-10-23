@@ -16,9 +16,12 @@ class Sensors:
 
 		# define thresholds / multipliers for analogue sensors
 		self.whskr_on_state = {'left': 1, 'right': 1}
-		self.light_threshold = {'black': 0, 'reflective': 250}	# TODO provide actual values
-		self.ir_dist_mltpl = 128 # TODO provide actual values
-		self.sonar_dist_mltpl = 128 # TODO provide actual values
+		self.light_threshold = {'front': {'black': 0, 'reflective': 120},
+								'rear': {'black': 0, 'reflective': 25},
+								'left': {'black': 0, 'reflective': 25},
+								'right': {'black': 0, 'reflective': 25}}	# Rear and side light sensor readings are NOT reliable
+		self.ir_dist_mltpl = [3.84502041e+02, -5.26487035e+00, 2.15287105e-02]
+		self.sonar_dist_mltpl = [.01, 0.076]
 
 		# for storing most recent sensor readings
 		self.analogue_readings = self.IO.getSensors()
@@ -51,13 +54,15 @@ class Sensors:
 
 	def get_sonar(self, raw=False):
 		if not raw:
-			return self.analogue_readings[self.port['sonar']]*self.sonar_dist_mltpl
+			reading = self.analogue_readings[self.port['sonar']]
+			return self.sonar_dist_mltpl[0] + self.sonar_dist_mltpl[1]*reading
 		else:
 			return self.analogue_readings[self.port['sonar']]
 
 	def get_ir(self, sensor_loc, raw=False):
 		if not raw:
-			return self.analogue_readings[self.port['ir'][sensor_loc]]*self.ir_dist_mltpl
+			reading = self.analogue_readings[self.port['ir'][sensor_loc]]
+			return self.ir_dist_mltpl[0] + reading*self.ir_dist_mltpl[1] + reading*reading*self.ir_dist_mltpl[2]
 		else:
 			return self.analogue_readings[self.port['ir'][sensor_loc]]
 
