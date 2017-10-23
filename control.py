@@ -1,44 +1,48 @@
-class Grid:
-    # free positions will be stored in the grid
-    # if a position is not present in the grid, it won't be accessible by the robot
-    def __init__(self, real_width, real_height, robot_width, robot_height, free_positions):
-        self._scaled_width = 0
-        self._scaled_height = 0
-        self._grid = {}
+import copy
 
-        self._fill_positions(free_positions)
-
-    def _fill_positions(self, free_positions):
-        for pos, neighbours in free_positions.items():
-            # for each neighbour the cost to get to it is 1
-            self._grid[pos] = [(n, 1) for n in neighbours]
-
-
-class Filter:
-    def __call__(self, *inputs):
-        raise NotImplementedError
-
-
-class KalmanFilter(Filter):
-    def __call__(self, *inputs):
-        raise NotImplementedError
+IR_MOTION_LIMIT = 0.10
+SONAR_MOTION_LIMIT = 0.10
+MOTION_TIME_LAP = 5
 
 
 class Control:
-    def __init__(self, grid, IO, vision):
-        self._grid = grid
-        self._IO = IO
-        self._filter = KalmanFilter()
-        self._vision = vision
+    def __init__(self, sensors, motors):
+        self._motors = motors
+        self._sensors = sensors
 
-    def sense(self):
-        inputs = self._IO.getInputs()
-        sensors = self._IO.getSensors()
-        camera_image = self._vision.get_camera()
-        return self._filter(inputs, sensors, camera_image)
+    def sense(self, state):
+        new_state = copy.deepcopy(state)
+        self._sensors.update_readings()
+        if self._sensors.get_whisker():
+            # we are facing an obstacle
+            new_state["whisker_on"] = True
+        elif self._sensors.get_sonar() <= SONAR_MOTION_LIMIT:
+            new_state["sonar_on"] = True
+        elif self._sensors.get_ir("left") <= IR_MOTION_LIMIT:
+            new_state["obstacle_left"] = True
+        elif self._sensors.get_ir("right") <= IR_MOTION_LIMIT:
+            new_state["obstacle_right"] = True
+        else:
+            new_state["obstacle_right"] = False
+            new_state["obstacle_left"] = False
+            new_state["whisker_on"] = False
+            new_state["sonar_on"] = False
 
-    def plan(self):
-        pass
+        return new_state
 
-    def act(self):
-        pass
+    def act(self, state):
+        if state["whisker_on"]:
+            # we are facing an obstacle
+            self._motors.full_on("backward", MOTION_TIME_LAP)
+        elif state["sonar_on"]:
+            # obstacle behind the robot
+            self._motors.stop()
+        elif state["obstacle_left"]:
+            # something on the left
+            self._motors.full_on("right", MOTION_TIME_LAP)
+        elif state["obstacle_right"]:
+            # something on the right
+            self._motors.full_on("left", MOTION_TIME_LAP)
+        else:
+            # go straight
+            self._motors.full_on("forward", MOTION_TIME_LAP)
