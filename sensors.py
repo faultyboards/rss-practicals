@@ -35,9 +35,11 @@ class Sensors:
 		if type == 'digital' or type == 'both':
 			self.digital_readings = self.IO.getInputs()
 
-	def get_whisker(self, side='both'):
-		if side == 'both':
+	def get_whisker(self, side='either'):
+		if side == 'either':
 			return self.digital_readings[self.port['whisker']['left']] or self.digital_readings[self.port['whisker']['right']]
+		elif side == 'both':
+			return self.digital_readings[self.port['whisker']['left']] and self.digital_readings[self.port['whisker']['right']]
 		else:
 			return self.digital_readings[self.port['whisker'][side]]
 
