@@ -47,21 +47,21 @@ class Sensors:
 		else:
 			return self.digital_readings[self.port['switch'][switch_no]]
 
-	def get_sonar(self, raw=True):
+	def get_sonar(self, raw=False):
 		if not raw:
 			return self.analogue_readings[self.port['sonar']]*self.sonar_dist_mltpl
 		else:
 			return self.analogue_readings[self.port['sonar']]
 
-	def get_ir(self, sensor_loc, raw=True):
+	def get_ir(self, sensor_loc, raw=False):
 		if not raw:
 			return self.analogue_readings[self.port['ir'][sensor_loc]]*self.ir_dist_mltpl
 		else:
 			return self.analogue_readings[self.port['ir'][sensor_loc]]
 
-	def get_light(self, sensor_loc, kind=True):
-		if kind:
-			return self.analogue_readings[self.port['light'][sensor_loc]] < self.light_threshold[kind]
+	def get_light(self, sensor_loc, raw=False):
+		if not raw:
+			return 'poi' if self.analogue_readings[self.port['light'][sensor_loc]] > self.light_threshold['reflective'] else 'floor'
 		else:
 			return self.analogue_readings[self.port['light'][sensor_loc]]
 
