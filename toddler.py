@@ -21,11 +21,10 @@ class Toddler:
             self.motors,
             self._poi_position,
             self._robot_position)
-        self._initial_state = {}
 
     # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
-        state = self._initial_state
+        state = self.control.init_state()
 
         while OK():
             new_state = self.control.sense(state)

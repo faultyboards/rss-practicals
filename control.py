@@ -4,6 +4,7 @@ IR_MOTION_LIMIT = 350
 SONAR_MOTION_LIMIT = 15
 MOTION_TIME_LAP = 0
 
+
 class Control:
     def __init__(self, sensors, motors, robot_pose=None, poi_pose=None):
         self._motors = motors
@@ -12,10 +13,23 @@ class Control:
         self._robot_pose = robot_pose
         self._poi_pose = poi_pose
 
-    def _reset_other_vars(self, var=None):
-        for key in self._last_state:
+    def init_state(self):
+        self._last_state = None
+        return {
+            "poi_detected": False,
+            "whisker_on": False,
+            "full_on_right": False,
+            "full_on_left": False,
+            "sonar_on": False,
+            "obstacle_right": False,
+            "obstacle_left": False
+        }
+
+    @staticmethod
+    def _reset_other_vars(state, var=None):
+        for key in state:
             if key != var:
-                self._last_state[key] = False
+                state[key] = False
 
     def sense(self, state):
         new_state = copy.deepcopy(state)
@@ -29,7 +43,7 @@ class Control:
             # we are facing an obstacle
             new_state["whisker_on"] = True
             curr_condition = "whisker_on"
-        elif new_state["whisker_on"]:
+        elif "whisker_on" in new_state and new_state["whisker_on"]:
             if self._sensors.get_ir("left", True) <= self._sensors.get_ir("right", True):
                 new_state["full_on_left"] = True
                 curr_condition = "full_on_left"
@@ -48,17 +62,17 @@ class Control:
 
         # set to False all the conditions different from curr_condition to False
         # If curr_condition is None, resets all the variables
-        self._reset_other_vars(curr_condition)
+        self._reset_other_vars(new_state, curr_condition)
 
         return new_state
 
     def act(self, state):
-        if self._last_state != state:
+        if self._last_state is None or self._last_state != state:
             if state["poi_detected"]:
                 # TODO: call Tom's function to compute the angle for the servo
                 # enable the servo
                 # activate it to turn of a given amount
-                pass
+                self._motors.stop()
             elif state["whisker_on"]:
                 # we are facing an obstacle
                 self._motors.full_on("backward")
@@ -78,5 +92,4 @@ class Control:
             else:
                 # go straight
                 self._motors.full_on("forward")
-
-        self._last_state = state
+            self._last_state = state
