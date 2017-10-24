@@ -4,38 +4,62 @@ IR_MOTION_LIMIT = 350
 SONAR_MOTION_LIMIT = 15
 MOTION_TIME_LAP = 0
 
-
 class Control:
-    def __init__(self, sensors, motors):
+    def __init__(self, sensors, motors, robot_pose=None, poi_pose=None):
         self._motors = motors
         self._sensors = sensors
         self._last_state = None
+        self._robot_pose = robot_pose
+        self._poi_pose = poi_pose
+
+    def _reset_other_vars(self, var=None):
+        for key in self._last_state:
+            if key != var:
+                self._last_state[key] = False
 
     def sense(self, state):
         new_state = copy.deepcopy(state)
         self._sensors.update_readings()
-        print(self._sensors.get_sonar(True))
-        if self._sensors.get_whisker():
+        curr_condition = None
+
+        if self._sensors.get_light("front") == "poi":
+            new_state["poi_detected"] = True
+            curr_condition = "poi_detected"
+        elif self._sensors.get_whisker():
             # we are facing an obstacle
             new_state["whisker_on"] = True
+            curr_condition = "whisker_on"
+        elif new_state["whisker_on"]:
+            if self._sensors.get_ir("left", True) <= self._sensors.get_ir("right", True):
+                new_state["full_on_left"] = True
+                curr_condition = "full_on_left"
+            else:
+                new_state["full_on_right"] = True
+                curr_condition = "full_on_right"
         elif self._sensors.get_sonar(True) <= SONAR_MOTION_LIMIT:
             new_state["sonar_on"] = True
+            curr_condition = "sonar_on"
         elif self._sensors.get_ir("left", True) >= IR_MOTION_LIMIT:
             new_state["obstacle_left"] = True
+            curr_condition = "obstacle_left"
         elif self._sensors.get_ir("right", True) >= IR_MOTION_LIMIT:
             new_state["obstacle_right"] = True
-        else:
-            new_state["obstacle_right"] = False
-            new_state["obstacle_left"] = False
-            new_state["whisker_on"] = False
-            new_state["sonar_on"] = False
+            curr_condition = "obstacle_right"
+
+        # set to False all the conditions different from curr_condition to False
+        # If curr_condition is None, resets all the variables
+        self._reset_other_vars(curr_condition)
+
         return new_state
 
     def act(self, state):
-        print(state)
-
         if self._last_state != state:
-            if state["whisker_on"]:
+            if state["poi_detected"]:
+                # TODO: call Tom's function to compute the angle for the servo
+                # enable the servo
+                # activate it to turn of a given amount
+                pass
+            elif state["whisker_on"]:
                 # we are facing an obstacle
                 self._motors.full_on("backward")
             elif state["sonar_on"]:
@@ -46,6 +70,10 @@ class Control:
                 self._motors.full_on("right")
             elif state["obstacle_right"]:
                 # something on the right
+                self._motors.full_on("left")
+            elif state["full_on_right"]:
+                self._motors.full_on("right")
+            elif state["full_on_left"]:
                 self._motors.full_on("left")
             else:
                 # go straight
