@@ -1,44 +1,82 @@
-class Grid:
-    # free positions will be stored in the grid
-    # if a position is not present in the grid, it won't be accessible by the robot
-    def __init__(self, real_width, real_height, robot_width, robot_height, free_positions):
-        self._scaled_width = 0
-        self._scaled_height = 0
-        self._grid = {}
+import copy
 
-        self._fill_positions(free_positions)
-
-    def _fill_positions(self, free_positions):
-        for pos, neighbours in free_positions.items():
-            # for each neighbour the cost to get to it is 1
-            self._grid[pos] = [(n, 1) for n in neighbours]
-
-
-class Filter:
-    def __call__(self, *inputs):
-        raise NotImplementedError
-
-
-class KalmanFilter(Filter):
-    def __call__(self, *inputs):
-        raise NotImplementedError
-
+IR_MOTION_LIMIT = 350
+SONAR_MOTION_LIMIT = 15
+MOTION_TIME_LAP = 0
 
 class Control:
-    def __init__(self, grid, IO, vision):
-        self._grid = grid
-        self._IO = IO
-        self._filter = KalmanFilter()
-        self._vision = vision
+    def __init__(self, sensors, motors, robot_pose=None, poi_pose=None):
+        self._motors = motors
+        self._sensors = sensors
+        self._last_state = None
+        self._robot_pose = robot_pose
+        self._poi_pose = poi_pose
 
-    def sense(self):
-        inputs = self._IO.getInputs()
-        sensors = self._IO.getSensors()
-        camera_image = self._vision.get_camera()
-        return self._filter(inputs, sensors, camera_image)
+    def _reset_other_vars(self, var=None):
+        for key in self._last_state:
+            if key != var:
+                self._last_state[key] = False
 
-    def plan(self):
-        pass
+    def sense(self, state):
+        new_state = copy.deepcopy(state)
+        self._sensors.update_readings()
+        curr_condition = None
 
-    def act(self):
-        pass
+        if self._sensors.get_light("front") == "poi":
+            new_state["poi_detected"] = True
+            curr_condition = "poi_detected"
+        elif self._sensors.get_whisker():
+            # we are facing an obstacle
+            new_state["whisker_on"] = True
+            curr_condition = "whisker_on"
+        elif new_state["whisker_on"]:
+            if self._sensors.get_ir("left", True) <= self._sensors.get_ir("right", True):
+                new_state["full_on_left"] = True
+                curr_condition = "full_on_left"
+            else:
+                new_state["full_on_right"] = True
+                curr_condition = "full_on_right"
+        elif self._sensors.get_sonar(True) <= SONAR_MOTION_LIMIT:
+            new_state["sonar_on"] = True
+            curr_condition = "sonar_on"
+        elif self._sensors.get_ir("left", True) >= IR_MOTION_LIMIT:
+            new_state["obstacle_left"] = True
+            curr_condition = "obstacle_left"
+        elif self._sensors.get_ir("right", True) >= IR_MOTION_LIMIT:
+            new_state["obstacle_right"] = True
+            curr_condition = "obstacle_right"
+
+        # set to False all the conditions different from curr_condition to False
+        # If curr_condition is None, resets all the variables
+        self._reset_other_vars(curr_condition)
+
+        return new_state
+
+    def act(self, state):
+        if self._last_state != state:
+            if state["poi_detected"]:
+                # TODO: call Tom's function to compute the angle for the servo
+                # enable the servo
+                # activate it to turn of a given amount
+                pass
+            elif state["whisker_on"]:
+                # we are facing an obstacle
+                self._motors.full_on("backward")
+            elif state["sonar_on"]:
+                # obstacle behind the robot
+                self._motors.stop()
+            elif state["obstacle_left"]:
+                # something on the left
+                self._motors.full_on("right")
+            elif state["obstacle_right"]:
+                # something on the right
+                self._motors.full_on("left")
+            elif state["full_on_right"]:
+                self._motors.full_on("right")
+            elif state["full_on_left"]:
+                self._motors.full_on("left")
+            else:
+                # go straight
+                self._motors.full_on("forward")
+
+        self._last_state = state

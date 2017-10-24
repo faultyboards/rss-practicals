@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 __IOTOOLS_VERSION__="1.0.0"
 
-from Phidgets.PhidgetException import PhidgetErrorCodes, PhidgetException
-from Phidgets.Events.Events import AttachEventArgs, DetachEventArgs, ErrorEventArgs, InputChangeEventArgs, OutputChangeEventArgs, SensorChangeEventArgs
+import threading
+import time
+import os
+
+from Phidgets.PhidgetException import PhidgetException
 from Phidgets.Devices.InterfaceKit import InterfaceKit
 from Phidgets.Devices.MotorControl import MotorControl
 from Phidgets.Devices.AdvancedServo import AdvancedServo
 from Phidgets.Devices.Servo import ServoTypes
-import threading
-import time
-import math
 import cv2
 import numpy
-import os
+
 
 class IOTools:
     def __init__(self, onRobot):
@@ -114,7 +114,7 @@ class IOTools:
     def imshow(self, wnd, img):
         if not self.onRobot:
             if img.__class__ != numpy.ndarray:
-                print "imshow - invalid image"
+                print("imshow - invalid image")
                 return False
             else:
                 cv2.imshow(wnd,img)
