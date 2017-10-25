@@ -7,7 +7,7 @@ __TODDLER_VERSION__ = "Best One"
 
 from sensors import Sensors
 
-
+DEFAULT_MOTION_DIST = 0.05
 class Toddler:
     def __init__(self, IO):
         print('I am a toddler playing in a sandbox')
@@ -29,7 +29,7 @@ class Toddler:
         while OK():
             if not poi_detected:
                 new_state = self.control.sense(state)
-                self.control.act_poi(new_state)
+                self.control.act_poi(new_state, DEFAULT_MOTION_DIST)
                 state = new_state
                 poi_detected = state["poi_detected"]
 
