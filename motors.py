@@ -29,11 +29,11 @@ class Motors:
         old_state = self.state['DC']['current']
         self.state['DC']['current'] = fullon
         if old_state != self.state['DC']['current']:
-        	self.IO.setMotors(fullon[0], fullon[1])
-        	if how_long is not None:
-            	time.sleep(how_long)
-            	self.state['DC']['current'] = old_state
-            	self.IO.setMotors(old_state[0], old_state[1])
+            self.IO.setMotors(fullon[0], fullon[1])
+            if how_long is not None:
+                time.sleep(how_long)
+                self.state['DC']['current'] = old_state
+                self.IO.setMotors(old_state[0], old_state[1])
 
     def stop(self):
         self.IO.setMotors(0, 0)
