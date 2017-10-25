@@ -32,13 +32,18 @@ class Motion():
 		'''
 		self.sensors.update_readings(type='digital')
 		hall_reading = self.sensors.get_hall()
+		time_now = time.time()
 		if not hall_reading and self.hall_reading_prev:
 			self.hall_count += 1
 			if self.hall_count > 1:
-				self.avg_speed = self.hall_trig_dist / (time.time() - self.hall_timer)
+				new_avg_speed = self.hall_trig_dist / (time_now - self.hall_timer)
+				if self.avg_speed_last_update is not None and np.abs(new_avg_speed-self.avg_speed) > 0.1 self.avg_speed:
+					raise Warning("Average speed estimate changed by more than 10%! (Hall sensor problem?)")
+				self.avg_speed = new_avg_speed
+				self.avg_speed_last_update = time_now
 			else:
 				
-			self.hall_timer = time.time()
+			self.hall_timer = time_now
 
 			self.hall_reading_prev = hall_reading
 
@@ -59,17 +64,13 @@ class Motion():
 		Returns estimated distance travelled in meters.
 		'''
 		self._hall_handler_reset()
-		motion_complete = False
 		start_time = time.time()
 		amount_travelled = 0
-		self.hall_count = 0
-		hall_reading_prev = False
-		hall_timer = None
 
 		if amount_type = 'radians':
-			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed
+			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed
 		elif amount_type = 'degrees':
-			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed * np.pi / 180
+			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed * np.pi / 180
 		elif 'time':
 			max_time = time
 
@@ -77,7 +78,7 @@ class Motion():
 
 		while time.time() - start_time < max_time:
 			self._hall_handler()
-			amount_travelled = (time.time() - start_time) / (self.angle_time_multiplier * self.avg_speed)
+			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
 
 		return amount_travelled
 
@@ -91,19 +92,19 @@ class Motion():
 		Positive values turn the robot clockwise and negative turn it anticlockwise.
 		Returns estimated angle turned in radians.
 		'''
-		motion_complete = False
 		start_time = time.time()
 		amount_travelled = 0
+
 		if amount_type = 'radians':
-			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed
+			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed
 		elif amount_type = 'degrees':
-			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed * np.pi / 180
+			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed * np.pi / 180
 		elif 'time':
 			max_time = time
 
 		self.motors.full_on('right' if amount > 0 else 'left')
 
 		while time.time() - start_time < max_time:
-			amount_travelled = (time.time() - start_time) / (self.angle_time_multiplier * self.avg_speed)
+			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
 
 		return amount_travelled
