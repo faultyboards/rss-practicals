@@ -26,13 +26,14 @@ class Motors:
 
     def full_on(self, motion='forward', how_long=None):
         fullon = self.apply_mult(self.motions[motion])
-        self.IO.setMotors(fullon[0], fullon[1])
         old_state = self.state['DC']['current']
         self.state['DC']['current'] = fullon
-        if how_long is not None:
-            time.sleep(how_long)
-            self.IO.setMotors(old_state[0], old_state[1])
-            self.state['DC']['current'] = old_state
+        if old_state != self.state['DC']['current']:
+        	self.IO.setMotors(fullon[0], fullon[1])
+        	if how_long is not None:
+            	time.sleep(how_long)
+            	self.state['DC']['current'] = old_state
+            	self.IO.setMotors(old_state[0], old_state[1])
 
     def stop(self):
         self.IO.setMotors(0, 0)
