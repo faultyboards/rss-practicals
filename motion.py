@@ -11,6 +11,7 @@ class Motion():
 	def __init__(self, IO):
 		# Multiplier dealing with how the state of the battery affects distance-travelled
 		# estimates
+
 		self.avg_speed = 0.0825 # initial value assumes average / full battery
 		self.IO = IO
 		self.sensors = Sensors(self.IO)
@@ -24,7 +25,7 @@ class Motion():
 		self.hall_reading_prev = False
 
 		self.angle_time_multiplier = 0.18465
-		
+
 	def _hall_handler(self):
 		'''
 		Called each time step to check what's up with teh hall sensor.
@@ -86,13 +87,10 @@ class Motion():
 							   (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ) + \
 							   travel_time_since_hall * self.avg_speed
 
-			print('amount travelled: {}+{}+{}={}'.format(travel_time_pre_hall * self.avg_speed,
-														 (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ),
-														 travel_time_since_hall * self.avg_speed,
-														 amount_travelled))
-
 			if amount_type == 'distance':
 				condition = amount_travelled <= amount
+			elif amount_type == 'callback':
+				condition = amount(amount_travelled)
 			else:
 				condition = amount >= (time_now - start_time)
 
@@ -111,7 +109,6 @@ class Motion():
 		'''
 		start_time = time.time()
 		amount_travelled = 0
-		# print('{}\t{}\t{}'.format(np.abs(amount), self.angle_time_multiplier, self.avg_speed))
 		if amount_type == 'radians':
 			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed
 		elif amount_type == 'degrees':
@@ -121,9 +118,14 @@ class Motion():
 
 		self.motors.full_on('right' if amount > 0 else 'left')
 
-		while time.time() - start_time < max_time:
+		condition = True
+		while condition:
 			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
-			print('{}\t{}'.format(amount_travelled, self.avg_speed / self.angle_time_multiplier))
+
+			if amount_type == 'callback':
+				condition = amount(amount_travelled)
+			else:
+				condition = time.time() - start_time < max_time
 
 		self.motors.stop()
 		return amount_travelled
@@ -133,5 +135,3 @@ class Motion():
 			angle *= 180 / np.pi
 		elif degree_type == 'degrees':
 			pass
-
-		self.motors.set_servo(angle)
