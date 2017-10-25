@@ -11,7 +11,7 @@ class Motion():
 	def __init__(self, IO):
 		# Multiplier dealing with how the state of the battery affects distance-travelled
 		# estimates
-		self.avg_speed = 1
+		self.avg_speed = 0.08 # initial value assumes full battery
 		self.IO = IO
 		self.sensors = Sensors(self.IO)
 		self.motors = Motors(self.IO)
@@ -22,9 +22,7 @@ class Motion():
 		self.last_hall_reading_time = None
 		self.hall_reading_prev = False
 
-		self.angle_time_multiplier = 1 # Needs to be callibrated
-
-		self.i = 0
+		self.angle_time_multiplier = 0.39 # Needs to be callibrated
 
 	def _hall_handler(self):
 		'''
@@ -37,20 +35,20 @@ class Motion():
 		time_now = time.time()
 		if not hall_reading and self.hall_reading_prev:
 			self.hall_count += 1
-			self.i += 1
 			if self.hall_count > 1:
 				new_avg_speed = self.hall_trig_dist / (time_now - self.hall_timer)
-				if (np.abs(new_avg_speed-self.avg_speed) > 0.1 * self.avg_speed):
-					raise Warning("Average speed estimate changed by more than 10%! (Hall sensor problem?)")
+				print('new_avg_speed: {}'.format(new_avg_speed))
+				if (np.abs(new_avg_speed-self.avg_speed) > 0.2 * self.avg_speed):
+					print("Warning! Average speed estimate changed by more than 20%! (Hall sensor problem?)")
 				self.avg_speed = new_avg_speed
 			self.last_hall_reading_time = time_now
 				
 			self.hall_timer = time_now
+			print('Hall fall - {}'.format(self.hall_count))
 
 		self.hall_reading_prev = hall_reading
 
 	def _hall_handler_reset(self):
-		self.hall_trig_dist = 1
 		self.hall_timer = None
 		self.hall_count = 0
 		self.sensors.update_readings(type='digital')
@@ -71,25 +69,27 @@ class Motion():
 		travel_pre_hall = 0
 		travel_since_hall = 0
 
-		if amount_type == 'distance':
-			max_time = np.abs(amount) / self.avg_speed
-		elif 'time':
-			max_time = time.time()
-
 		self.motors.full_on('forward' if amount > 0 else 'backwards')
 
 		condition = True
 		while condition:
 			self._hall_handler()
-			time_now = time_now
+			time_now = time.time()
 
 			if self.hall_count == 0:
-				travel_pre_hall += (time_now - start_time) * self.avg_speed
+				travel_time_pre_hall = (time_now - start_time) * self.avg_speed
 			else:
-				travel_since_hall = (time_now - self.last_hall_reading_time) * self.avg_speed 
+				travel_time_since_hall = (time_now - self.last_hall_reading_time) * self.avg_speed 
 
-			amount_travelled = travel_pre_hall + (self.hall_trig_dist * self.hall_count) + travel_since_hall
-			
+			amount_travelled = travel_time_pre_hall * self.avg_speed + \
+							   (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ) + \
+							   travel_time_since_hall * self.avg_speed
+
+			print('amount travelled: {}+{}+{}={}'.format(travel_time_pre_hall * self.avg_speed,
+														 (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ),
+														 travel_time_since_hall * self.avg_speed,
+														 amount_travelled))
+
 			if amount_type == 'distance':
 				condition = amount_travelled <= amount
 			else:
@@ -110,7 +110,7 @@ class Motion():
 		'''
 		start_time = time.time()
 		amount_travelled = 0
-		print('{}\t{}\t{}'.format(np.abs(amount), self.angle_time_multiplier, self.avg_speed))
+		# print('{}\t{}\t{}'.format(np.abs(amount), self.angle_time_multiplier, self.avg_speed))
 		if amount_type == 'radians':
 			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed
 		elif amount_type == 'degrees':
@@ -121,7 +121,7 @@ class Motion():
 		self.motors.full_on('right' if amount > 0 else 'left')
 
 		while time.time() - start_time < max_time:
-			print('{}\t{}'.format(time.time() - start_time, max_time))
+			# print('{}\t{}'.format(time.time() - start_time, max_time))
 			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
 
 		self.motors.stop()
