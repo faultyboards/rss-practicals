@@ -22,7 +22,7 @@ class Motion():
 		self.hall_count = 0
 		self.hall_reading_prev
 
-		self.angle_time_multiplier = 1
+		self.angle_time_multiplier = 8 # Needs to be callibrated
 
 	def _hall_handler():
 		'''
@@ -58,6 +58,7 @@ class Motion():
 		Negative values move the robot backwards.
 		Returns estimated distance travelled in meters.
 		'''
+		self._hall_handler_reset()
 		motion_complete = False
 		start_time = time.time()
 		amount_travelled = 0
@@ -66,16 +67,16 @@ class Motion():
 		hall_timer = None
 
 		if amount_type = 'radians':
-			max_time = amount * self.angle_time_multiplier * self.avg_speed
+			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed
 		elif amount_type = 'degrees':
-			max_time = amount * self.angle_time_multiplier * self.avg_speed * np.pi / 180
+			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed * np.pi / 180
 		elif 'time':
 			max_time = time
 
-		self.motors.full_on('right' if amount > 0 else 'left')
+		self.motors.full_on('forward' if amount > 0 else 'backwards')
 
 		while time.time() - start_time < max_time:
-
+			self._hall_handler()
 			amount_travelled = (time.time() - start_time) / (self.angle_time_multiplier * self.avg_speed)
 
 		return amount_travelled
@@ -94,15 +95,15 @@ class Motion():
 		start_time = time.time()
 		amount_travelled = 0
 		if amount_type = 'radians':
-			max_time = amount * self.angle_time_multiplier * self.battery_state
+			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed
 		elif amount_type = 'degrees':
-			max_time = amount * self.angle_time_multiplier * self.battery_state * np.pi / 180
+			max_time = np.abs(amount) * self.angle_time_multiplier * self.avg_speed * np.pi / 180
 		elif 'time':
 			max_time = time
 
 		self.motors.full_on('right' if amount > 0 else 'left')
 
 		while time.time() - start_time < max_time:
-			amount_travelled = (time.time() - start_time) / (self.angle_time_multiplier * self.battery_state)
+			amount_travelled = (time.time() - start_time) / (self.angle_time_multiplier * self.avg_speed)
 
 		return amount_travelled
