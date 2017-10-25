@@ -15,6 +15,7 @@ class Motion():
 		self.IO = IO
 		self.sensors = Sensors(self.IO)
 		self.motors = Motors(self.IO)
+		self.motors.enable_servo()
 
 		self.hall_trig_dist = 0.125
 		self.hall_timer = None
@@ -126,3 +127,11 @@ class Motion():
 
 		self.motors.stop()
 		return amount_travelled
+
+	def set_antenna(self, angle, degree_type='radians'):
+		if degree_type == 'radians':
+			angle *= 180 / np.pi
+		elif degree_type == 'degrees':
+			pass
+
+		self.motors.set_servo(angle)
