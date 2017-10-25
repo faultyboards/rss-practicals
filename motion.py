@@ -12,7 +12,6 @@ class Motion():
 		# Multiplier dealing with how the state of the battery affects distance-travelled
 		# estimates
 		self.avg_speed = 1
-		self.avg_speed_last_update = None
 		self.IO = IO
 		self.sensors = Sensors(self.IO)
 		self.motors = Motors(self.IO)
@@ -20,6 +19,7 @@ class Motion():
 		self.hall_trig_dist = 0.125
 		self.hall_timer = None
 		self.hall_count = 0
+		self.last_hall_reading_time = None
 		self.hall_reading_prev = False
 
 		self.angle_time_multiplier = 1 # Needs to be callibrated
@@ -40,10 +40,10 @@ class Motion():
 			self.i += 1
 			if self.hall_count > 1:
 				new_avg_speed = self.hall_trig_dist / (time_now - self.hall_timer)
-				if (self.avg_speed_last_update is not None) and (np.abs(new_avg_speed-self.avg_speed) > 0.1 * self.avg_speed):
+				if (np.abs(new_avg_speed-self.avg_speed) > 0.1 * self.avg_speed):
 					raise Warning("Average speed estimate changed by more than 10%! (Hall sensor problem?)")
 				self.avg_speed = new_avg_speed
-				self.avg_speed_last_update = time_now
+			self.last_hall_reading_time = time_now
 				
 			self.hall_timer = time_now
 
@@ -68,18 +68,32 @@ class Motion():
 		self._hall_handler_reset()
 		start_time = time.time()
 		amount_travelled = 0
+		travel_pre_hall = 0
+		travel_since_hall = 0
 
 		if amount_type == 'distance':
-			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed
+			max_time = np.abs(amount) / self.avg_speed
 		elif 'time':
 			max_time = time.time()
 
 		self.motors.full_on('forward' if amount > 0 else 'backwards')
 
-		while time.time() - start_time < max_time:
-			print('{}\t{}'.format(time.time() - start_time, max_time))
+		condition = True
+		while condition:
 			self._hall_handler()
-			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
+			time_now = time_now
+
+			if self.hall_count == 0:
+				travel_pre_hall += (time_now - start_time) * self.avg_speed
+			else:
+				travel_since_hall = (time_now - self.last_hall_reading_time) * self.avg_speed 
+
+			amount_travelled = travel_pre_hall + (self.hall_trig_dist * self.hall_count) + travel_since_hall
+			
+			if amount_type == 'distance':
+				condition = amount_travelled <= amount
+			else:
+				condition = amount >= (time_now - start_time)
 
 		self.motors.stop()
 		return amount_travelled
