@@ -18,7 +18,7 @@ class Motors:
         self.last_servo_change = None
 
         self.motions = {'forward': (100, 100), 'backward': (-100, -100),
-                        'right': (100, -100), 'left': (-100, 100)}
+                        'right': (-100, 100), 'left': (100, -100)}
 
     def apply_mult(self, motor_setting):
         return (self.motor_pwr_multiplier[0] * motor_setting[0], \

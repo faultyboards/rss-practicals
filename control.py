@@ -6,8 +6,9 @@ MOTION_TIME_LAP = 0
 
 
 class Control:
-    def __init__(self, sensors, motors, robot_pose=None, poi_pose=None):
+    def __init__(self, IO, sensors, motors, robot_pose=None, poi_pose=None):
         self._motors = motors
+        self._IO = IO
         self._sensors = sensors
         self._last_state = None
         self._robot_pose = robot_pose
@@ -72,10 +73,10 @@ class Control:
                 # TODO: call Tom's function to compute the angle for the servo
                 # enable the servo
                 # activate it to turn of a given amount
-                self._motors.stop()
+                self._IO.setStatus('flash', 2, 6, 0)
             elif state["whisker_on"]:
                 # we are facing an obstacle
-                self._motors.full_on("backward")
+                self._motors.full_on("backward", 3)
             elif state["sonar_on"]:
                 # obstacle behind the robot
                 self._motors.stop()
