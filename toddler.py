@@ -27,8 +27,8 @@ class Toddler:
         while OK():
             if self.mode == 'navigation':
                 # Go until obstacle is detected
-                dist_travelled = self.motion(_simple_stop_condition_callback, 'callback')
-                if self.sensors.get_light('front') == poi:
+                dist_travelled = self.motion.move(Toddler._simple_stop_condition_callback, 'callback')
+                if self.sensors.get_light('front') == 'poi':
                     # Move forward until get on the poi (15is cm?)
                     self.motion.move(0.15)
                 elif self.sensors.get_whisker():
@@ -42,19 +42,31 @@ class Toddler:
                     # Then continue with your travel
             elif self.mode == 'poi_search':
                 # Go until obstacle is detected
-                dist_travelled = self.motion(_simple_stop_condition_callback, 'callback')
-                if self.sensors.get_light('front') == poi:
+                print('Going forward')
+                dist_travelled, reason = self.motion.move(Toddler._simple_stop_condition_callback, 'callback')
+                if reason == 'whisker':
+                    # We bumped into an obstacle - back to the start location
+                    print('OBSTACLE')
+                    self.motion.move(-1 * dist_travelled)
+                    print('Turning for next try')
+                    self.motion.turn(15, 'degrees')
+                elif reason == 'distance':
+                    print('backing off')
+                    self.motion.move(-1 * dist_travelled)
+                    print('Turning for next try')
+                    self.motion.turn(15, 'degrees')
+                    # Neither of them so continue the search but at other angle
+                # if self.sensors.get_light('front') == 'poi':
+                elif reason == 'poi':
+                    # Must be POI
                     # Move forward until get on the poi (15is cm?)
+                    print('POI detected')
                     self.motion.move(0.15)
                     print('Finished!')
                     while True:
                         pass
-                elif self.sensors.get_whisker():
-                    # We bumped into an obstacle - back to the start location
-                    self.motion.move(-1 * dist_travelled)
-                elif dist_travelled > 0.4:
-                    self.motion.turn(15, 'degrees')
-                    # Neither of them so continue the search but at other angle
+                else:
+                    print('???')
 
 
     # This is a callback that will be called repeatedly.
@@ -63,8 +75,19 @@ class Toddler:
         while OK():
             pass
 
-    def _simple_stop_condition_callback(distance):
-        distance_allowed = 0.4
-        return distance > distance_allowed or \
-               self.sensors.get_light('front') == 'poi' or \
-               self.sensors.get_whisker()
+    @staticmethod
+    def _simple_stop_condition_callback(sensors, distance):
+        distance_allowed = 0.70
+        retval = distance > distance_allowed or \
+               sensors.get_light('front') == 'poi' or \
+               sensors.get_whisker()
+        reason = None
+        if distance > distance_allowed:
+            reason = 'distance'
+        elif sensors.get_light('front') == 'poi':
+            reason = 'poi'
+        elif sensors.get_whisker():
+            reason = 'whisker'
+
+        print('{} callback {} {} {}'.format(not retval, distance, sensors.get_light('front'), sensors.get_whisker()))
+        return not retval, reason
