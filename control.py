@@ -6,13 +6,12 @@ MOTION_TIME_LAP = 0
 
 
 class Control:
-    def __init__(self, IO, sensors, motors, robot_pose=None, poi_pose=None):
-        self._motors = motors
+    def __init__(self, IO, sensors, motion, robot_position=None):
+        self._motion = motion
         self._IO = IO
         self._sensors = sensors
         self._last_state = None
-        self._robot_pose = robot_pose
-        self._poi_pose = poi_pose
+        self._robot_pose = robot_position
 
     def init_state(self):
         self._last_state = None
@@ -67,30 +66,63 @@ class Control:
 
         return new_state
 
-    def act(self, state):
+    def act_navigation(self, state):
         if self._last_state is None or self._last_state != state:
             if state["poi_detected"]:
-                # TODO: call Tom's function to compute the angle for the servo
-                # enable the servo
-                # activate it to turn of a given amount
                 self._IO.setStatus('flash', 2, 6, 0)
+                self._motion.stop()
             elif state["whisker_on"]:
                 # we are facing an obstacle
-                self._motors.full_on("backward", 3)
+                self._motion.move(-0.05)
             elif state["sonar_on"]:
                 # obstacle behind the robot
-                self._motors.stop()
+                self._motion.stop()
             elif state["obstacle_left"]:
                 # something on the left
-                self._motors.full_on("right")
+                self._motion.turn(90, "degrees")
+                self._motion.move(0.05)
             elif state["obstacle_right"]:
                 # something on the right
-                self._motors.full_on("left")
+                self._motion.turn(-90, "degrees")
+                self._motion.move(0.05)
             elif state["full_on_right"]:
-                self._motors.full_on("right")
+                self._motion.turn(15, "degrees")
+                self._motion.move(0.05)
             elif state["full_on_left"]:
-                self._motors.full_on("left")
+                self._motion.turn(-15, "degrees")
+                self._motion.move(0.05)
             else:
                 # go straight
-                self._motors.full_on("forward")
+                self._motion.move(0.5)
+            self._last_state = state
+
+    def act_poi(self, state, move_dist):
+        if self._last_state is None or self._last_state != state:
+            if state["poi_detected"]:
+                self._IO.setStatus('flash', 2, 6, 0)
+                self._motion.stop()
+            elif state["whisker_on"]:
+                # we are facing an obstacle
+                self._motion.move(-0.05)
+            elif state["sonar_on"]:
+                # obstacle behind the robot
+                self._motion.stop()
+            elif state["obstacle_left"]:
+                # something on the left
+                self._motion.turn(90, "degrees")
+                self._motion.move(0.05)
+            elif state["obstacle_right"]:
+                # something on the right
+                self._motion.turn(-90, "degrees")
+                self._motion.move(0.05)
+            elif state["full_on_right"]:
+                self._motion.turn(15, "degrees")
+                self._motion.move(0.05)
+            elif state["full_on_left"]:
+                self._motion.turn(-15, "degrees")
+                self._motion.move(0.05)
+            else:
+                # go straight
+                self._motion.turn(15)
+                self._motion.move(move_dist)
             self._last_state = state

@@ -4,7 +4,6 @@ import control
 
 __TODDLER_VERSION__ = "Best One"
 
-from motors import Motors
 from sensors import Sensors
 
 
@@ -13,12 +12,12 @@ class Toddler:
         print('I am a toddler playing in a sandbox')
         self.IO = IO
         self.sensors = Sensors(self.IO)
-        self.motors = Motors(self.IO)
+        self.motion = Motion(self.IO)
         self._poi_position = []
         self._robot_position = []
         self.control = control.Control(
             self.sensors,
-            self.motors,
+            self.motion,
             self._poi_position,
             self._robot_position)
 
@@ -28,7 +27,7 @@ class Toddler:
 
         while OK():
             new_state = self.control.sense(state)
-            self.control.act(new_state)
+            self.control.act_navigation(new_state)
             state = new_state
 
     # This is a callback that will be called repeatedly.
