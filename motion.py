@@ -11,20 +11,20 @@ class Motion():
 	def __init__(self, IO):
 		# Multiplier dealing with how the state of the battery affects distance-travelled
 		# estimates
-		self.avg_speed = 0.08 # initial value assumes full battery
+		self.avg_speed = 0.0825 # initial value assumes average / full battery
 		self.IO = IO
 		self.sensors = Sensors(self.IO)
 		self.motors = Motors(self.IO)
 		self.motors.enable_servo()
 
-		self.hall_trig_dist = 0.125
+		self.hall_trig_dist = 0.135675
 		self.hall_timer = None
 		self.hall_count = 0
 		self.last_hall_reading_time = None
 		self.hall_reading_prev = False
 
-		self.angle_time_multiplier = 0.39 # Needs to be callibrated
-
+		self.angle_time_multiplier = 0.18465
+		
 	def _hall_handler(self):
 		'''
 		Called each time step to check what's up with teh hall sensor.
@@ -67,8 +67,8 @@ class Motion():
 		self._hall_handler_reset()
 		start_time = time.time()
 		amount_travelled = 0
-		travel_pre_hall = 0
-		travel_since_hall = 0
+		travel_time_pre_hall = 0
+		travel_time_since_hall = 0
 
 		self.motors.full_on('forward' if amount > 0 else 'backwards')
 
@@ -78,9 +78,9 @@ class Motion():
 			time_now = time.time()
 
 			if self.hall_count == 0:
-				travel_time_pre_hall = (time_now - start_time) * self.avg_speed
+				travel_time_pre_hall = (time_now - start_time)
 			else:
-				travel_time_since_hall = (time_now - self.last_hall_reading_time) * self.avg_speed 
+				travel_time_since_hall = (time_now - self.last_hall_reading_time) 
 
 			amount_travelled = travel_time_pre_hall * self.avg_speed + \
 							   (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ) + \
@@ -122,8 +122,8 @@ class Motion():
 		self.motors.full_on('right' if amount > 0 else 'left')
 
 		while time.time() - start_time < max_time:
-			# print('{}\t{}'.format(time.time() - start_time, max_time))
 			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
+			print('{}\t{}'.format(amount_travelled, self.avg_speed / self.angle_time_multiplier))
 
 		self.motors.stop()
 		return amount_travelled
