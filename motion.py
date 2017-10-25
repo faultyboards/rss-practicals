@@ -11,6 +11,7 @@ class Motion():
 	def __init__(self, IO):
 		# Multiplier dealing with how the state of the battery affects distance-travelled
 		# estimates
+
 		self.avg_speed = 0.0825 # initial value assumes average / full battery
 		self.IO = IO
 		self.sensors = Sensors(self.IO)
@@ -24,7 +25,9 @@ class Motion():
 		self.hall_reading_prev = False
 
 		self.angle_time_multiplier = 0.18465
-		
+
+		self.servo_engaged = False
+
 	def _hall_handler(self):
 		'''
 		Called each time step to check what's up with teh hall sensor.
@@ -70,7 +73,7 @@ class Motion():
 		travel_time_pre_hall = 0
 		travel_time_since_hall = 0
 
-		self.motors.full_on('forward' if amount > 0 else 'backwards')
+		self.motors.full_on('forward' if amount > 0 else 'backward')
 
 		condition = True
 		while condition:
@@ -86,18 +89,18 @@ class Motion():
 							   (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ) + \
 							   travel_time_since_hall * self.avg_speed
 
-			print('amount travelled: {}+{}+{}={}'.format(travel_time_pre_hall * self.avg_speed,
-														 (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ),
-														 travel_time_since_hall * self.avg_speed,
-														 amount_travelled))
-
 			if amount_type == 'distance':
-				condition = amount_travelled <= amount
+				condition = amount_travelled <= np.abs(amount)
+			elif amount_type == 'callback':
+				condition, reason = amount(self.sensors, amount_travelled)
 			else:
-				condition = amount >= (time_now - start_time)
+				condition = np.abs(amount) >= (time_now - start_time)
 
 		self.motors.stop()
-		return amount_travelled
+		if amount_type == 'callback':
+			return amount_travelled, reason
+		else:
+			return amount_travelled
 
 
 	def turn(self, amount, amount_type='radians'):
@@ -111,7 +114,6 @@ class Motion():
 		'''
 		start_time = time.time()
 		amount_travelled = 0
-		# print('{}\t{}\t{}'.format(np.abs(amount), self.angle_time_multiplier, self.avg_speed))
 		if amount_type == 'radians':
 			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed
 		elif amount_type == 'degrees':
@@ -121,14 +123,27 @@ class Motion():
 
 		self.motors.full_on('right' if amount > 0 else 'left')
 
-		while time.time() - start_time < max_time:
+		condition = True
+		while condition:
 			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
-			print('{}\t{}'.format(amount_travelled, self.avg_speed / self.angle_time_multiplier))
+
+			if amount_type == 'callback':
+				condition, reason = amount(self.sensors, amount_travelled)
+			else:
+				condition = time.time() - start_time < max_time
 
 		self.motors.stop()
-		return amount_travelled
+		if amount_type == 'callback':
+			return amount_travelled, reason
+		else:
+			return amount_travelled
+
 
 	def set_antenna(self, angle, degree_type='radians'):
+		if not self.servo_engaged:
+			self.motors.enable_servo()
+			self.servo_engaged = True
+			
 		if degree_type == 'radians':
 			angle *= 180 / np.pi
 		elif degree_type == 'degrees':

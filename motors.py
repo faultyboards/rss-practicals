@@ -36,7 +36,7 @@ class Motors:
                 self.IO.setMotors(old_state[0], old_state[1])
 
     def stop(self):
-        self.IO.setMotors(0, 0)
+        self.IO.setMotors(1, 1)
         time.sleep(2)
         self.state['DC']['current'] = (0, 0)
 

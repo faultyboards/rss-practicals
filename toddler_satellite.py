@@ -9,7 +9,7 @@ from sensors import Sensors
 
 SATELLITE_POSITION = [-0.69, 0, 2.95]
 ANTENNA_POSITION = [-0.04, -0.09, 0.25]
-ROBOT_POSITION = [0, 0, 0]
+ROBOT_POSITION = [0.355, 3.319, 0]
 ROBOT_ORIENTATION = 0
 
 
@@ -77,8 +77,10 @@ class Toddler:
         while OK():
             if not goal_reached:
                 bot_turn_deg, antenna_rot = find_satellite(ROBOT_POSITION, ROBOT_ORIENTATION, SATELLITE_POSITION)
-                self.motion.turn(bot_turn_deg)
-                self.motion.set_servo(antenna_rot)
+                self.motion.move(0.2)
+                self.motion.move(-0.2)
+                self.motion.turn(bot_turn_deg, 'degrees')
+                self.motion.set_servo(antenna_rot, 'degrees')
                 goal_reached = True
 
     # This is a callback that will be called repeatedly.

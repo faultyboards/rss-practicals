@@ -5,6 +5,7 @@ import control
 __TODDLER_VERSION__ = "Best One"
 
 from sensors import Sensors
+from motion import Motion
 
 
 class Toddler:
@@ -30,8 +31,26 @@ class Toddler:
             self.control.act_navigation(new_state)
             state = new_state
 
+
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
     def Vision(self, OK):
         while OK():
             pass
+
+    @staticmethod
+    def _simple_stop_condition_callback(sensors, distance):
+        distance_allowed = 0.70
+        retval = distance > distance_allowed or \
+               sensors.get_light('front') == 'poi' or \
+               sensors.get_whisker()
+        reason = None
+        if distance > distance_allowed:
+            reason = 'distance'
+        elif sensors.get_light('front') == 'poi':
+            reason = 'poi'
+        elif sensors.get_whisker():
+            reason = 'whisker'
+
+        print('{} callback {} {} {}'.format(not retval, distance, sensors.get_light('front'), sensors.get_whisker()))
+        return not retval, reason

@@ -68,8 +68,7 @@ class Sensors:
 
 	def get_light(self, sensor_loc, raw=False):
 		if not raw:
-			return 'poi' if self.analogue_readings[self.port['light'][sensor_loc]] > self.light_threshold[sensor_loc][
-				'reflective'] else 'floor'
+			return 'poi' if self.analogue_readings[self.port['light'][sensor_loc]] > self.light_threshold[sensor_loc]['reflective'] else 'floor'
 		else:
 			return self.analogue_readings[self.port['light'][sensor_loc]]
 
