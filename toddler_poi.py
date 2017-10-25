@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import control
+from motion import Motion
 
 __TODDLER_VERSION__ = "Best One"
 

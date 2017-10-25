@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from motion import Motion
 
 __TODDLER_VERSION__ = "Best One"
 
