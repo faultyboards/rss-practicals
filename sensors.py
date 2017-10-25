@@ -7,7 +7,7 @@ class Sensors:
 		# digital sensors
 		self.port['whisker'] = {'left': 0, 'right': 1}
 		self.port['switch'] = [2, 3, 4, 5]
-		self.port['hall'] = [6]
+		self.port['hall'] = -1
 
 		# analogue sensors
 		self.port['sonar'] = 0
@@ -71,5 +71,8 @@ class Sensors:
 			return 'poi' if self.analogue_readings[self.port['light'][sensor_loc]] > self.light_threshold['reflective'] else 'floor'
 		else:
 			return self.analogue_readings[self.port['light'][sensor_loc]]
+
+	def get_hall(self):
+		return self.digital_readings[self.port['hall']]
 
 
