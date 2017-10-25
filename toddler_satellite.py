@@ -9,8 +9,10 @@ from sensors import Sensors
 
 SATELLITE_POSITION = [-0.69, 0, 2.95]
 ANTENNA_POSITION = [-0.04, -0.09, 0.25]
-ROBOT_POSITION = [0.355, 3.319, 0]
-ROBOT_ORIENTATION = 0
+# ROBOT_POSITION = [0.355, 3.319, 0]
+# ROBOT_POSITION = [-0.9, 2.44, 0]
+ROBOT_POSITION = [1.4, 1.8, 0]
+ROBOT_ORIENTATION = np.pi
 
 
 def find_satellite(robot_position, robot_orientation, satellite_pos):
@@ -30,7 +32,8 @@ def find_satellite(robot_position, robot_orientation, satellite_pos):
     botDir = [np.add(np.multiply(forwardVec[0], np.cos(robot_orientation)),
                      np.multiply(forwardVec[1], np.sin(robot_orientation))),
               np.add(np.multiply(-forwardVec[0], np.sin(robot_orientation)),
-                     np.multiply(forwardVec[1], np.cos(robot_orientation)))]
+                     np.multiply(forwardVec[1], np.cos(robot_orientation))),
+              0]
 
     # normalise
     np.linalg.norm(botDir)
@@ -38,9 +41,22 @@ def find_satellite(robot_position, robot_orientation, satellite_pos):
     print "\nbotdir = ", botDir
 
     # the x& y values of antenna to satellite
-    a2sg = [antenna2Satellite[0], antenna2Satellite[1]]
+    a2sg = [antenna2Satellite[0], antenna2Satellite[1], 0]
     # a2sg converted into 3d space by adding a 0 in the z axis
     a2s3d = [antenna2Satellite[0], antenna2Satellite[1], 0]
+
+    upVector = [0,0,1]
+    normal = np.cross(botDir, a2sg)
+    print 'dotDir = ', botDir
+    print ' a2sg= ', a2sg
+    angle = np.dot(upVector, normal)
+
+    print 'angle = ', angle
+
+    sign = angle / np.abs(angle)
+
+    print 'sign = ', sign
+
 
     # find the angle between the bots forward direction and the satellite
     botTurnRad = np.arccos(np.divide(np.dot(botDir, a2sg),
@@ -49,6 +65,8 @@ def find_satellite(robot_position, robot_orientation, satellite_pos):
 
     # convert the angle to degrees
     botTurnDeg = (botTurnRad / (2 * np.pi)) * 360
+
+   #botTurnDeg = botTurnDeg * sign
 
 
     # find the angle between the plane and the satellite
@@ -77,10 +95,13 @@ class Toddler:
         while OK():
             if not goal_reached:
                 bot_turn_deg, antenna_rot = find_satellite(ROBOT_POSITION, ROBOT_ORIENTATION, SATELLITE_POSITION)
-                self.motion.move(0.2)
-                self.motion.move(-0.2)
-                self.motion.turn(bot_turn_deg, 'degrees')
-                self.motion.set_servo(antenna_rot, 'degrees')
+                #if np.abs(bot_turn_deg) >= 180:
+                #    bot_turn_deg = (bot_turn_deg+180)%360
+                self.motion.move(0.20)
+                self.motion.move(-0.20)
+                if ROBOT_ORIENTAT
+                self.motion.turn(bot_turn_deg - 90, 'degrees')
+                self.motion.set_antenna(antenna_rot, 'degrees')
                 goal_reached = True
 
     # This is a callback that will be called repeatedly.

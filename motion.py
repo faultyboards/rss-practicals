@@ -37,6 +37,7 @@ class Motion():
 		self.sensors.update_readings(type='digital')
 		hall_reading = self.sensors.get_hall()
 		time_now = time.time()
+		# print(hall_reading)
 		if not hall_reading and self.hall_reading_prev:
 			self.hall_count += 1
 			if self.hall_count > 1:
