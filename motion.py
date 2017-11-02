@@ -4,6 +4,30 @@ import numpy as np
 from sensors import Sensors
 from motors import Motors
 
+SATELLITE_POS = [-0.69, 0, 2.95]
+ANTENNA_POS = [-0.04, -0.09, 0.25]
+START_POS = [0., 0., 0.]
+
+def find_sat_angls(robot_pos, robot_ornt, sat_pos):
+    p = np.array(robot_pos) + np.array(ANTENNA_POSITION)
+    s = np.array(sat_pos)
+    r = s - p
+    r_f = np.concatenate([r[:2], np.zeros(1)])
+
+    ant_angl = (np.pi/2 - np.arccos(np.dot(r,np.array([0,0,1]))/np.linalg.norm(r))) % (2 * np.pi)
+    bot_turn = ((1 if r_f[1] < 0 else -1) * np.arccos(np.dot(r_f,np.array([1,0,0]))/np.linalg.norm(r_f)) + \
+                    np.pi/2 - \
+                    robot_ornt) % (2 * np.pi)
+    
+    if bot_turn < -np.pi/2:
+        bot_turn += np.pi
+    elif bot_turn > np.pi/2:
+        bot_turn -= np.pi
+    else:
+        ant_angl = np.pi - ant_angl
+
+    return bot_turn, ant_angl
+
 class Motion():
 	'''
 	This class is a high-level motion controller dealing with odometry, navigation, etc.
