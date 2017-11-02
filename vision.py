@@ -52,37 +52,78 @@ def vision_test2():
         for i in range(wall_img_filtered.shape[0]):
             if wall_img_filtered[i][j] > 150 and i > last_points[j]:
                 last_points[j] = i
-        point = last_points[j]
+        point = last_points[j] + 20
         wall_img_filtered[:point + 1, j] = np.zeros(point + 1)
         frame[:point + 1, j] = np.zeros((point + 1, 3))
 
-    blurred_frame = cv2.GaussianBlur(frame, (51, 51), 5, 1, 5)
+    blurred_frame = cv2.GaussianBlur(frame, (11, 11), 100)
     cv2.imwrite("img/wall_img_filtered.jpg", wall_img_filtered)
     cv2.imwrite("img/wall_img.jpg", wall_img)
     cv2.imwrite("img/poi_filtered.jpg", frame)
 
-    hsv_filtered = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    hsv_filtered = cv2.inRange(hsv_filtered, poi_color_lower, poi_color_upper)
-    frame_filtered = cv2.bitwise_and(frame, frame, mask=hsv_filtered)
-    frame_filtered = cv2.medianBlur(frame_filtered, 5)
-    frame_filtered = cv2.morphologyEx(frame_filtered, cv2.MORPH_OPEN, (5, 5))
+    red_channel = frame[:, :, 2]
+    blue_channel = frame[:, :, 0]
+    green_channel = frame[:, :, 1]
 
-    cv2.imwrite("img/poi_filtered_mask.jpg", frame_filtered)
+    rc_centered = cv2.GaussianBlur(compute_error_matrix(red_channel, "mean"), (31, 15), 100)
+    bc_centered = cv2.GaussianBlur(compute_error_matrix(blue_channel, "mean"), (31, 15), 100)
+    gc_centered = cv2.GaussianBlur(compute_error_matrix(green_channel, "mean"), (31, 15), 100)
 
-    # code for error matrix calculation
-    # red_channel = blurred_frame[:, :, 0]
-    # blue_channel = blurred_frame[:, :, 1]
-    # green_channel = blurred_frame[:, :, 2]
-    #
-    # rc_centered = compute_error_matrix(red_channel, "mean")
-    # bc_centered = compute_error_matrix(blue_channel, "mean")
-    # gc_centered = compute_error_matrix(green_channel, "mean")
-    #
-    # error_matrix = rc_centered + bc_centered + gc_centered
-    #
-    # _, img_error = cv2.threshold(error_matrix, np.median(error_matrix), np.max(error_matrix), cv2.THRESH_BINARY)
-    #
-    # cv2.imwrite("img/error.png", img_error)
+    # rc_centered = cv2.GaussianBlur(row_base_mean_centered(red_channel), (31, 15), 100)
+    # bc_centered = cv2.GaussianBlur(row_base_mean_centered(blue_channel), (31, 15), 100)
+    # gc_centered = cv2.GaussianBlur(row_base_mean_centered(green_channel), (31, 15), 100)
+    # qwe = np.log10(np.log10(np.log10((rc_centered*bc_centered*gc_centered)+1)+1)+1)
+    qwe = np.log(rc_centered * bc_centered * gc_centered)
+    qwe = cv2.morphologyEx(qwe, cv2.MORPH_OPEN, (7, 7))
+    # print(np.max(qwe))
+    # print(np.mean(qwe))
+    # plt.plot(np.arange((np.sort(qwe.flatten())).shape[0]), np.sort(qwe.flatten()))
+    # plt.savefig('img/foo.png')
+    # qwe /= np.max(qwe)
+    #  print((cv2.applyColorMap(np.expand_dims(rc_centered, axis=2), cv2.COLORMAP_JET)).shape)
+    cv2.imwrite("img/error.png", cv2.applyColorMap(qwe.astype(np.uint8), cv2.COLORMAP_JET))
+    # cv2.imwrite("img/err.jpg", cv2.applyColorMap(qwe.astype(np.uint8), cv2.COLORMAP_JET))
+    # cv2.imwrite("img/err.jpg", np.hstack(((cv2.applyColorMap(rc_centered.astype(np.uint8), cv2.COLORMAP_JET)), (cv2.applyColorMap(bc_centered.astype(np.uint8), cv2.COLORMAP_JET)), (cv2.applyColorMap(gc_centered.astype(np.uint8), cv2.COLORMAP_JET)))))
+
+    return
+
+
+def vision_test():
+    cap = cv2.VideoCapture(0)
+
+    while True:
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+
+        # Our operations on the frame come here
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # Display the resulting frame
+        lower_range = np.array([169, 100, 100], dtype=np.uint8)
+        upper_range = np.array([189, 255, 255], dtype=np.uint8)
+
+        cv2.namedWindow('frame')
+        cv2.imshow('frame', frame)
+        cv2.resizeWindow('frame', 100, 100)
+        mask = cv2.inRange(hsv, lower_range, upper_range)
+
+        cv2.namedWindow('mask')
+        cv2.imshow('mask', mask)
+        cv2.resizeWindow('mask', 100, 100)
+
+        if np.mean(mask) > 0.5:
+            print("Detected red object in image!")
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # When everything done, release the capture
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    vision_test2()
 
 
 def vision_test():
