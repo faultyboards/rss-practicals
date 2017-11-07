@@ -10,9 +10,11 @@ class Motors:
         self.state['DC']['current'] = self.state['DC']['initial']
         self.state['servo']['current'] = self.state['servo']['initial']
         self.state['servo']['engaged'] = False
+        self.state['DC']['direction_skew'] = 0
 
         # Setup constants
-        self.motor_pwr_multiplier = (1, -1)
+        self.motor_pwr_multiplier = (0.9, -0.9)
+        self.direction_skew_multiplier = (0.1, -0.1)
 
         self.servo_seconds_per_degree = 0.02
         self.last_servo_change = None
@@ -20,9 +22,23 @@ class Motors:
         self.motions = {'forward': (100, 100), 'backward': (-100, -100),
                         'right': (-100, 100), 'left': (100, -100)}
 
+    def apply_direction_skew(self, dir_skew):
+        '''
+        Skews the direction of motion in faviour of turning more right (positive skew) or left
+        (negative skew).
+        '''
+        if dir_skew > 1:
+            dir_skew = 1
+        elif dir_skew < -1:
+            dir_skew = -1
+        self.state['DC']['direction_skew'] = dir_skew
+        
+
     def apply_mult(self, motor_setting):
-        return (self.motor_pwr_multiplier[0] * motor_setting[0], \
-                self.motor_pwr_multiplier[1] * motor_setting[1])
+        return (self.motor_pwr_multiplier[0] * motor_setting[0] + \
+                self.state['DC']['direction_skew'] * self.direction_skew_multiplier[0], \
+                self.motor_pwr_multiplier[1] * motor_setting[1] + \
+                self.state['DC']['direction_skew'] * self.direction_skew_multiplier[1])
 
     def full_on(self, motion='forward', how_long=None):
         fullon = self.apply_mult(self.motions[motion])
@@ -37,7 +53,8 @@ class Motors:
 
     def stop(self):
         self.IO.setMotors(1, 1)
-        time.sleep(2)
+        self.apply_direction_skew(0)
+        time.sleep(1)
         self.state['DC']['current'] = (0, 0)
 
     def enable_servo(self):

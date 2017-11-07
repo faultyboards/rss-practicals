@@ -8,35 +8,39 @@ SATELLITE_POS = [-0.69, 0, 2.95]
 ANTENNA_POS = [-0.04, -0.09, 0.25]
 START_POS = [0., 0., 0.]
 
+
 def find_sat_angls(robot_pos, robot_ornt, sat_pos):
-    p = np.array(robot_pos) + np.array(ANTENNA_POSITION)
-    s = np.array(sat_pos)
-    r = s - p
-    r_f = np.concatenate([r[:2], np.zeros(1)])
+	p = np.array(robot_pos) + np.array(ANTENNA_POSITION)
+	s = np.array(sat_pos)
+	r = s - p
+	r_f = np.concatenate([r[:2], np.zeros(1)])
 
-    ant_angl = (np.pi/2 - np.arccos(np.dot(r,np.array([0,0,1]))/np.linalg.norm(r))) % (2 * np.pi)
-    bot_turn = ((1 if r_f[1] < 0 else -1) * np.arccos(np.dot(r_f,np.array([1,0,0]))/np.linalg.norm(r_f)) + \
-                    np.pi/2 - \
-                    robot_ornt) % (2 * np.pi)
-    
-    if bot_turn < -np.pi/2:
-        bot_turn += np.pi
-    elif bot_turn > np.pi/2:
-        bot_turn -= np.pi
-    else:
-        ant_angl = np.pi - ant_angl
+	ant_angl = (np.pi / 2 - np.arccos(np.dot(r,
+				np.array([0, 0, 1])) / np.linalg.norm(r))) % (2 * np.pi)
+	bot_turn = ((1 if r_f[1] < 0 else -1) * np.arccos(np.dot(r_f, np.array([1, 0, 0])) / np.linalg.norm(r_f)) +
+					np.pi / 2 -
+					robot_ornt) % (2 * np.pi)
 
-    return bot_turn, ant_angl
+	if bot_turn < -np.pi / 2:
+		bot_turn += np.pi
+	elif bot_turn > np.pi / 2:
+		bot_turn -= np.pi
+	else:
+		ant_angl = np.pi - ant_angl
+
+	return bot_turn, ant_angl
+
 
 class Motion():
 	'''
 	This class is a high-level motion controller dealing with odometry, navigation, etc.
 	'''
+
 	def __init__(self, IO):
 		# Multiplier dealing with how the state of the battery affects distance-travelled
 		# estimates
 
-		self.avg_speed = 0.0825 # initial value assumes average / full battery
+		self.avg_speed = 0.0825  # initial value assumes average / full battery
 		self.IO = IO
 		self.sensors = Sensors(self.IO)
 		self.motors = Motors(self.IO)
@@ -49,6 +53,8 @@ class Motion():
 		self.hall_reading_prev = False
 
 		self.angle_time_multiplier = 0.18465
+
+		self.wall_distance_control_mul = 1
 
 		self.servo_engaged = False
 
@@ -67,11 +73,11 @@ class Motion():
 			if self.hall_count > 1:
 				new_avg_speed = self.hall_trig_dist / (time_now - self.hall_timer)
 				print('new_avg_speed: {}'.format(new_avg_speed))
-				if (np.abs(new_avg_speed-self.avg_speed) > 0.2 * self.avg_speed):
+				if (np.abs(new_avg_speed - self.avg_speed) > 0.2 * self.avg_speed):
 					print("Warning! Average speed estimate changed by more than 20%! (Hall sensor problem?)")
 				self.avg_speed = new_avg_speed
 			self.last_hall_reading_time = time_now
-				
+
 			self.hall_timer = time_now
 			print('Hall fall - {}'.format(self.hall_count))
 
@@ -83,12 +89,17 @@ class Motion():
 		self.sensors.update_readings(type='digital')
 		self.hall_reading_prev = self.sensors.get_hall()
 
-	def move(self, amount, amount_type='distance'):
+	def move(self, amount, amount_type='distance', wall_following=None):
 		'''
 		Moves the robot by the specified amount. By default the amount is distance in meteres.
 		Set amount_type to 'time' for the amount to be time of motion in seconds, or 'callback'
 		for amount to be a reference to a callback function to be evaulated periodically (True
 		result stops the motion).
+
+		If wall_following is set to a number the robot will actively try to keep a given distance
+		from a wall on its left (negative values of 'wall_following') or right (positive values for
+		'wall_following'). 'wall_following' should be in meters.
+
 		Negative values move the robot backwards.
 		Returns estimated distance travelled in meters.
 		'''
@@ -108,7 +119,7 @@ class Motion():
 			if self.hall_count == 0:
 				travel_time_pre_hall = (time_now - start_time)
 			else:
-				travel_time_since_hall = (time_now - self.last_hall_reading_time) 
+				travel_time_since_hall = (time_now - self.last_hall_reading_time)
 
 			amount_travelled = travel_time_pre_hall * self.avg_speed + \
 							   (self.hall_trig_dist * ((self.hall_count - 1) if self.hall_count > 0 else 0) ) + \
@@ -121,12 +132,18 @@ class Motion():
 			else:
 				condition = np.abs(amount) >= (time_now - start_time)
 
+			if wall_following is not None:
+				wall_dist = self.sensors.get_ir['right' if wall_following >=0 else 'left']
+				error_percent = np.abs(wall_following - wall_dist) / wall_following
+				print(error_percent)
+
+				self.motors.apply_direction_skew(error_percent)
+
 		self.motors.stop()
 		if amount_type == 'callback':
 			return amount_travelled, reason
 		else:
 			return amount_travelled
-
 
 	def turn(self, amount, amount_type='radians'):
 		'''
@@ -142,7 +159,8 @@ class Motion():
 		if amount_type == 'radians':
 			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed
 		elif amount_type == 'degrees':
-			max_time = np.abs(amount) * self.angle_time_multiplier / self.avg_speed * np.pi / 180
+			max_time = np.abs(amount) * self.angle_time_multiplier / \
+							  self.avg_speed * np.pi / 180
 		elif 'time':
 			max_time = time
 
@@ -150,7 +168,8 @@ class Motion():
 
 		condition = True
 		while condition:
-			amount_travelled = (time.time() - start_time) * self.avg_speed / self.angle_time_multiplier
+			amount_travelled = (time.time() - start_time) * \
+								self.avg_speed / self.angle_time_multiplier
 
 			if amount_type == 'callback':
 				condition, reason = amount(self.sensors, amount_travelled)
@@ -162,6 +181,14 @@ class Motion():
 			return amount_travelled, reason
 		else:
 			return amount_travelled
+
+	def move_along_wall(self, amount, wall_distance, amount_type='distance'):
+		''' 
+		Like self.move() but tries to keep a constant distance from a wall on its left (negative
+		values of 'amount') or right (positive values for 'amount').
+		'''
+
+
 
 
 	def set_antenna(self, angle, degree_type='radians'):
