@@ -40,14 +40,14 @@ class Motion():
     navigation, etc.
     '''
 
-    def __init__(self, IO):
+    def __init__(self, IO, sensors=None, motors=None):
         # Multiplier dealing with how the state of the battery affects
         # distance-travelled estimates
 
         self.avg_speed = 0.0825  # initial value assumes average / full battery
         self.IO = IO
-        self.sensors = Sensors(self.IO)
-        self.motors = Motors(self.IO)
+        self.sensors = Sensors(self.IO) if sensors is None else sensors
+        self.motors = Motors(self.IO) if motors is None else motors
         self.motors.enable_servo()
 
         self.hall_trig_dist = 0.135675
