@@ -15,11 +15,12 @@ class Sensors:
         self.port['ir'] = {'left': 5, 'right': 6}
 
         # define thresholds / multipliers for analogue sensors
+        # Rear and side light sensor readings are NOT reliable
         self.whskr_on_state = {'left': 1, 'right': 1}
         self.light_threshold = {'front': {'black': 0, 'reflective': 120},
                                 'rear': {'black': 0, 'reflective': 25},
                                 'left': {'black': 0, 'reflective': 25},
-                                'right': {'black': 0, 'reflective': 25}}    # Rear and side light sensor readings are NOT reliable
+                                'right': {'black': 0, 'reflective': 25}}
         self.ir_dist_mltpl = [3.84502041e+02, -5.26487035e+00, 2.15287105e-02]
         self.sonar_dist_mltpl = [.01, 0.076]
 
@@ -28,7 +29,7 @@ class Sensors:
         self.digital_readings = self.IO.getInputs()
 
         # Fix sonar resolution
-        self.IO._interfaceKit.setSensorChangeTrigger(self.port['sonar'],1)
+        self.IO._interfaceKit.setSensorChangeTrigger(self.port['sonar'], 1)
 
         self.default_to_raw = False
 
@@ -40,9 +41,11 @@ class Sensors:
 
     def get_whisker(self, side='either'):
         if side == 'either':
-            return self.digital_readings[self.port['whisker']['left']] or self.digital_readings[self.port['whisker']['right']]
+            return (self.digital_readings[self.port['whisker']['left']] or
+                    self.digital_readings[self.port['whisker']['right']])
         elif side == 'both':
-            return self.digital_readings[self.port['whisker']['left']] and self.digital_readings[self.port['whisker']['right']]
+            return (self.digital_readings[self.port['whisker']['left']] and
+                    self.digital_readings[self.port['whisker']['right']])
         else:
             return self.digital_readings[self.port['whisker'][side]]
 
@@ -55,24 +58,28 @@ class Sensors:
     def get_sonar(self, raw=False):
         if not raw:
             reading = self.analogue_readings[self.port['sonar']]
-            return self.sonar_dist_mltpl[0] + self.sonar_dist_mltpl[1]*reading
+            return (self.sonar_dist_mltpl[0] +
+                    self.sonar_dist_mltpl[1] * reading)
         else:
             return self.analogue_readings[self.port['sonar']]
 
     def get_ir(self, sensor_loc, raw=False):
         if not raw:
             reading = self.analogue_readings[self.port['ir'][sensor_loc]]
-            return self.ir_dist_mltpl[0] + reading*self.ir_dist_mltpl[1] + reading*reading*self.ir_dist_mltpl[2]
+            return (self.ir_dist_mltpl[0] +
+                    reading * self.ir_dist_mltpl[1] +
+                    reading * reading * self.ir_dist_mltpl[2])
         else:
             return self.analogue_readings[self.port['ir'][sensor_loc]]
 
     def get_light(self, sensor_loc, raw=False):
         if not raw:
-            return 'poi' if self.analogue_readings[self.port['light'][sensor_loc]] > self.light_threshold[sensor_loc]['reflective'] else 'floor'
+            return ('poi' if
+                    self.analogue_readings[self.port['light'][sensor_loc]] >
+                    self.light_threshold[sensor_loc]['reflective']
+                    else 'floor')
         else:
             return self.analogue_readings[self.port['light'][sensor_loc]]
 
     def get_hall(self):
         return self.digital_readings[self.port['hall']]
-
-

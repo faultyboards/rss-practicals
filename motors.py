@@ -24,21 +24,22 @@ class Motors:
 
     def apply_direction_skew(self, dir_skew):
         '''
-        Skews the direction of motion in faviour of turning more right (positive skew) or left
-        (negative skew).
+        Skews the direction of motion in faviour of turning more right
+        (positive skew) or left (negative skew).
         '''
         if dir_skew > 1:
             dir_skew = 1
         elif dir_skew < -1:
             dir_skew = -1
         self.state['DC']['direction_skew'] = dir_skew
-        
 
     def apply_mult(self, motor_setting):
-        return (self.motor_pwr_multiplier[0] * motor_setting[0] + \
-                self.state['DC']['direction_skew'] * self.direction_skew_multiplier[0], \
-                self.motor_pwr_multiplier[1] * motor_setting[1] + \
-                self.state['DC']['direction_skew'] * self.direction_skew_multiplier[1])
+        return (self.motor_pwr_multiplier[0] * motor_setting[0] +
+                self.state['DC']['direction_skew'] *
+                self.direction_skew_multiplier[0],
+                self.motor_pwr_multiplier[1] * motor_setting[1] +
+                self.state['DC']['direction_skew'] *
+                self.direction_skew_multiplier[1])
 
     def full_on(self, motion='forward', how_long=None):
         fullon = self.apply_mult(self.motions[motion])
@@ -69,7 +70,9 @@ class Motors:
         if self.state['servo']['engaged']:
             self.IO.servoSet(angle)
             # block for a time proportional to the angle we need to turn
-            time.sleep(abs(angle - self.state['servo']['current']) * self.servo_seconds_per_degree)
+            time.sleep(
+                abs(angle - self.state['servo']['current']) *
+                self.servo_seconds_per_degree)
             self.state['servo']['current'] = angle
         else:
             raise Exception('Servo was not engaged!')
