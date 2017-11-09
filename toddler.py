@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 from motion import Motion
+from motors import Motors
+from sensors import Sensors
+from wallwalker import Wallwalker
 
 __TODDLER_VERSION__ = "Best One"
-
-import numpy as np
-
-from sensors import Sensors
-from motors import Motors
 
 class Toddler:
     def __init__(self, IO):
@@ -15,11 +13,14 @@ class Toddler:
         self.sensors = Sensors(self.IO)
         self.motion = Motion(self.IO)
         self.motors = Motors(self.IO)
+        self.wallwalker = Wallwalker(self.sensors, self.motion)
 
     # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
         while OK():
-            pass
+            self.wallwalker.step()
+            print(self.wallwalker.distance_along)
+            time.sleep(2)
 
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
