@@ -57,10 +57,12 @@ class Toddler:
             dist_from_centerline = poi_position[0] - self.vision.centerline
 
         # Heading towards POI -> Now walk until you are touching it
-        travel = self.motion.move(self.cb_poi_light, 'callback')
-        # enter poi itself
-        travel += self.motion.move(self.poi_size)
-        return travel, angle_turned
+        travel, stop_cond = self.motion.move(self.cb_poi_light, 'callback')
+        if stop_cond == 'poi':
+            # enter poi itself
+            travel += self.motion.move(self.poi_size)
+
+        return travel, angle_turned, stop_cond == 'poi'
 
     def get_pos_est(self, travel, angle_turned):
         '''
@@ -128,9 +130,12 @@ class Toddler:
                 print("Lost poi -> backtrack until found")
                 self.wallwalker.unstep()
                 # And now aim to go for the poi
-                poi_travel, angle_turned = self.poi_go(poi_position)
-                pos_est = self.get_pos_est(poi_travel, angle_turned)
-                self.poi_service(pos_est)
+                poi_travel, angle_turned, success = self.poi_go(poi_position)
+                # Only do the antenna alignment stuff if we actually entered a
+                # poi
+                if success:
+                    pos_est = self.get_pos_est(poi_travel, angle_turned)
+                    self.poi_service(pos_est)
                 self.poi_return(poi_travel, angle_turned)
                 self.poi_handled += 1
             else:
