@@ -29,6 +29,7 @@ class Toddler:
         self.readings = np.empty(self.SAMPL)
 
         self.segs_with_poi = []
+        self.poi_handled = 0
 
     def cb_poi_light(sensors, distance_travelled):
         '''
@@ -119,14 +120,22 @@ class Toddler:
                 print("No poi detected in the segment yet!")
                 return
             else:
-                # We just lost poi -> need to backtract
+                # Seeing poi for the first time in this segment
+                self.segs_with_poi.append(self.wallwalker.current_segment)
+        else:
+            if poi_position is None:
+                # We just lost poi -> need to backtrack
                 print("Lost poi -> backtrack until found")
                 self.wallwalker.unstep()
+                # And now aim to go for the poi
                 poi_travel, angle_turned = self.poi_go(poi_position)
                 pos_est = self.get_pos_est(poi_travel, angle_turned)
                 self.poi_service(pos_est)
                 self.poi_return(poi_travel, angle_turned)
-        else:
+                self.poi_handled += 1
+            else:
+                # Seeing the poi again -> do nothing
+                pass
             # We've seen the poi already in this segment and are still seeing
             # it
             self.last_poi_position = poi_position
@@ -134,13 +143,19 @@ class Toddler:
             # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
         while OK():
-            if (self.wallwalker.current_segment >=
-                    len(self.wallwalker._segment_info)):
+            if self.wallwalker.current_segment >= \
+                    len(self.wallwalker._segment_info) or \
+                    self.poi_handled >= 3:
                 print('Finished')
                 while True:
                     pass
+
+            # Main loop
+            # Check for poi
             poi_position = self.vision.get_poi_position()
+            # Decide what to do
             self.poi_decide_what_to_do(poi_position)
+            # Progress on the track
             self.wallwalker.step()
 
     # This is a callback that will be called repeatedly.
