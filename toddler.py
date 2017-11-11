@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import cv2
 
 from motion import Motion
 from vision import Vision
@@ -26,5 +27,17 @@ class Toddler:
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
     def Vision(self, OK):
+        i = 0
         while OK():
-            pass
+
+            if self.sensors.get_switch(0):
+                img = self.vision.grab_image(5)
+                self.IO.imshow(img)
+                cv2.imwrite('camera-' + str(i) + '.png', img)
+                poi_location, moments = self.vision.get_poi_location(img)
+
+                if poi_location:
+                    print("Correctly recognized POI!")
+                    print(poi_location)
+                else:
+                    print("unable able to get POI")

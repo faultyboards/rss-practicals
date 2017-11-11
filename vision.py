@@ -1,4 +1,5 @@
 import copy
+import glob
 import time
 
 import cv2
@@ -32,8 +33,9 @@ class Vision:
 
         return self.IO.cameraRead()
 
-    def get_poi_location(self, n=5, debug=False):
-        frame = self.grab_image(n)
+    def get_poi_location(self, frame=None, n=5, debug=False):
+        if frame is not None:
+            frame = self.grab_image(n)
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         start = time.time()
         wall_img = cv2.inRange(hsv, wall_lower_range, wall_upper_range)
@@ -78,7 +80,7 @@ class Vision:
             print("contours localization took: {}".format(time.time() - start))
 
         if not max_bound_rect:
-            return None, None, None
+            return None, None
 
         mean_area = np.mean(areas)
 
@@ -99,7 +101,7 @@ class Vision:
 
             return self._poi_position, moments
 
-        return None, None, None
+        return None, None
 
 
 def compute_error_matrix(m, central_value_method="mean"):
@@ -203,148 +205,108 @@ def vision_test2():
 
 
 def check_threshold():
-    frame = cv2.imread("img/poi_1.png")
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    start = time.time()
-    wall_img = cv2.inRange(hsv, wall_lower_range, wall_upper_range)
-    wall_img = cv2.GaussianBlur(wall_img, (11, 1), 1, 1, wall_img.shape[0])
-    print("Wall detection took: {}".format(time.time() - start))
+    def _check_threshold(frame_filename):
+        frame = cv2.imread(frame_filename)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        start = time.time()
+        wall_img = cv2.inRange(hsv, wall_lower_range, wall_upper_range)
+        wall_img = cv2.GaussianBlur(wall_img, (11, 1), 1, 1, wall_img.shape[0])
+        print("Wall detection took: {}".format(time.time() - start))
 
-    wall_img_filtered = copy.deepcopy(wall_img)
+        wall_img_filtered = copy.deepcopy(wall_img)
 
-    start = time.time()
-    frame[wall_img_filtered > 150] = 0
-    print("Wall removal took: {}".format(time.time() - start))
+        start = time.time()
+        frame[wall_img_filtered > 150] = 0
+        print("Wall removal took: {}".format(time.time() - start))
 
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    poi_img = cv2.inRange(hsv, poi_color_lower, poi_color_upper)
-    cv2.imshow("frame", hsv)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        cv2.imshow("frame", hsv)
 
-    def change_h_lower_param(x):
-        global data
-        data["h_lower"] = x
-        poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
-        poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
+        def change_h_lower_param(x):
+            global data
+            data["h_lower"] = x
+            poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
+            poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
-        img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-        cv2.imshow("frame", img)
+            img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
+            cv2.imshow("frame", img)
 
-    def change_s_lower_param(x):
-        global data
+        def change_s_lower_param(x):
+            global data
 
-        data["s_lower"] = x
+            data["s_lower"] = x
 
-        poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
-        poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
+            poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
+            poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
-        img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-        cv2.imshow("frame", img)
+            img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
+            cv2.imshow("frame", img)
 
-    def change_v_lower_param(x):
-        global data
+        def change_v_lower_param(x):
+            global data
 
-        data["v_lower"] = x
-        poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
-        poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
+            data["v_lower"] = x
+            poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
+            poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
-        img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
+            img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
 
-        cv2.imshow("frame", img)
+            cv2.imshow("frame", img)
 
-    def change_h_upper_param(x):
-        global data
-        data["h_upper"] = x
+        def change_h_upper_param(x):
+            global data
+            data["h_upper"] = x
 
-        poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
-        poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
+            poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
+            poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
-        img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-        cv2.imshow("frame", img)
+            img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
+            cv2.imshow("frame", img)
 
-    def change_s_upper_param(x):
-        global data
+        def change_s_upper_param(x):
+            global data
 
-        data["s_upper"] = x
+            data["s_upper"] = x
 
-        poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
-        poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
+            poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
+            poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
-        img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-        cv2.imshow("frame", img)
+            img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
+            cv2.imshow("frame", img)
 
-    def change_v_upper_param(x):
-        global data
+        def change_v_upper_param(x):
+            global data
 
-        data["v_upper"] = x
+            data["v_upper"] = x
 
-        poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
-        poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
+            poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
+            poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
-        img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-        cv2.imshow("frame", img)
+            img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
+            cv2.imshow("frame", img)
 
-    # {'s_lower': 20, 'h_lower': 41, 'v_upper': 255, 'v_lower': 187, 'h_upper': 171, 's_upper': 139}
-    cv2.namedWindow('frame')
-    cv2.createTrackbar('h_lower', 'frame', 0, 171, change_h_lower_param)
-    cv2.createTrackbar('s_lower', 'frame', 0, 255, change_s_lower_param)
-    cv2.createTrackbar('v_lower', 'frame', 0, 255, change_v_lower_param)
-    cv2.createTrackbar('h_upper', 'frame', 0, 171, change_h_upper_param)
-    cv2.createTrackbar('s_upper', 'frame', 0, 255, change_v_upper_param)
-    cv2.createTrackbar('v_upper', 'frame', 0, 255, change_s_upper_param)
+        # {'s_lower': 20, 'h_lower': 41, 'v_upper': 255, 'v_lower': 187, 'h_upper': 171, 's_upper': 139}
+        cv2.namedWindow('frame')
+        cv2.createTrackbar('h_lower', 'frame', 0, 171, change_h_lower_param)
+        cv2.createTrackbar('s_lower', 'frame', 0, 255, change_s_lower_param)
+        cv2.createTrackbar('v_lower', 'frame', 0, 255, change_v_lower_param)
+        cv2.createTrackbar('h_upper', 'frame', 0, 171, change_h_upper_param)
+        cv2.createTrackbar('s_upper', 'frame', 0, 255, change_v_upper_param)
+        cv2.createTrackbar('v_upper', 'frame', 0, 255, change_s_upper_param)
 
-    cv2.waitKey(-1)
+        cv2.waitKey(-1)
+        cv2.destroyAllWindows()
+
+        return data
+
+    poi_thresholds = []
+    for name in glob.glob("img/poi*.png"):
+        print("Analyzing poi image {}".format(name))
+
+        data = _check_threshold(name)
+        poi_thresholds.append(data)
 
     print(data)
-    cv2.destroyAllWindows()
-
-    return
-
-    start = time.time()
-    poi_img_canny = cv2.Canny(poi_img, 10, 10)
-    _, contours0, hierarchy = cv2.findContours(poi_img_canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    print("Canny detection took: {}".format(time.time() - start))
-
-    max_area = 0
-    max_bound_rect = None
-    max_contours_id = None
-    areas = []
-
-    start = time.time()
-    for i, cnt in enumerate(contours0):
-        approx_cnt = cv2.approxPolyDP(cnt, 3, True)
-        bound_rect = cv2.boundingRect(approx_cnt)
-        cnt_area = bound_rect[2] * bound_rect[3]
-        areas.append(cnt_area)
-
-        if cnt_area > max_area:
-            max_area = cnt_area
-            max_bound_rect = bound_rect
-            max_contours_id = i
-
-    print("contours localization took: {}".format(time.time() - start))
-
-    if not max_bound_rect:
-        return None
-
-    mean_area = np.mean(areas)
-
-    if np.abs(max_area - mean_area) > 0.5:
-        moments = cv2.moments(max_bound_rect)
-
-        cx = int(moments["m10"] / moments["m00"])
-        cy = int(moments["m01"] / moments["m00"])
-        poi_position = (cx, cy)
-
-        poi_contours = np.zeros_like(poi_img_canny)
-        cv2.drawContours(poi_contours, contours0, max_contours_id, (150, 0, 255))
-
-        cv2.rectangle(poi_contours, (max_bound_rect[0], max_bound_rect[1]),
-                      (max_bound_rect[0] + max_bound_rect[2], max_bound_rect[1] + max_bound_rect[3]),
-                      (150, 0, 255), 2)
-
-        return poi_position, poi_contours
-
 
 def vision_test():
     cap = cv2.VideoCapture(0)
@@ -381,5 +343,5 @@ def vision_test():
 
 
 if __name__ == "__main__":
-    vision_test2()
-    # check_threshold()
+    # vision_test2()
+    check_threshold()
