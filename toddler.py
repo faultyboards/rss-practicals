@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+
 from motion import Motion
 from motors import Motors
 from sensors import Sensors
+from vision import Vision
 from wallwalker import Wallwalker
 
 import numpy as np
@@ -18,6 +20,7 @@ class Toddler:
         self.motion = Motion(self.IO)
         self.motors = Motors(self.IO)
         self.wallwalker = Wallwalker(self.sensors, self.motion)
+        self.vision = Vision(self.IO)
 
         self.SAMPL = 100
         self.satellite_pos = np.array([-0.69, 0, 2.95])
@@ -74,7 +77,6 @@ class Toddler:
         current_position = track_position + travel * np.array([np.cos(heading),
                                                                np.sin(heading),
                                                                0])
-        current_position[2] = heading
         return current_position
 
     def poi_service(self, pos_est):
