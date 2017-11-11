@@ -228,7 +228,7 @@ class Wallwalker():
             y = self._segment_info[3][0] + 1.05 - 0.2 - 0.42 / 2
             th = 0
 
-        return (x, y, th)
+        return np.array([x, y, th])
 
 
 if __name__ == "__main__":
