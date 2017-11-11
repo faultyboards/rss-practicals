@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Sensors:
     def __init__(self, IO):
         self.IO = IO
@@ -66,15 +67,16 @@ class Sensors:
             return self.analogue_readings[self.port['sonar']]
 
     def get_ir(self, sensor_loc, raw=False):
+        samples_no = 1000
+        readings = np.empty(samples_no)
+        for i in range(samples_no):
+            readings[i] = self.analogue_readings[self.port['ir'][sensor_loc]]
+        r_med = np.median(readings)
+        r_std = readings.std()
+        readings_no_outliers = [reading for reading in readings
+                                if np.abs(r_med - reading) <= 2 * r_std]
+        reading = np.median(readings_no_outliers)
         if not raw:
-            samples_no = 1000
-            readings = np.empty(samples_no)
-            for i in range(samples_no):
-                readings[i] = self.analogue_readings[self.port['ir'][sensor_loc]]
-            r_med = np.median(readings)
-            r_std = readings.std()
-            readings_no_outliers = [reading for reading in readings if np.abs(r_med-reading) < 2 * r_std]
-            reading = np.median(readings_no_outliers)
             return (self.ir_dist_mltpl[0] +
                     reading * self.ir_dist_mltpl[1] +
                     reading * reading * self.ir_dist_mltpl[2])
