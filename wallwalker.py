@@ -117,6 +117,15 @@ class Wallwalker():
             self.seg_transition_due))
         return retval
 
+    def unstep(self, step_length=None):
+        '''
+        Motions back by a step amount appropirate for a given segment.
+        '''
+        _, segment_step_size, _, _, _, _, _, _ = self._segment_info[
+            self.current_segment]
+        distance_undone = self.motion.move(-segment_step_size)
+        self.distance_along -= distance_undone
+
     def generic_step_with_left_hook(self):
         if self.current_segment >= len(self._segment_info):
             print('no more steps')
