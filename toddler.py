@@ -17,19 +17,15 @@ class Toddler:
         print('I am a toddler playing in a sandbox')
         self.IO = IO
         self.sensors = Sensors(self.IO)
-        self.motion = Motion(self.IO)
         self.motors = Motors(self.IO)
+        self.motion = Motion(self.IO, self.sensors, self.motors)
         self.wallwalker = Wallwalker(self.sensors, self.motion)
         self.vision = Vision(self.IO)
 
-        self.SAMPL = 100
         self.satellite_pos = np.array([-0.69, 0, 2.95])
         self.antenna_pos = np.array([-0.04, -0.09, 0.25])
         self.poi_size = 0.2  # TODO
         self.transmission_time = 10  # TODO
-
-        self.readings_idx = 0
-        self.readings = np.empty(self.SAMPL)
 
         self.segs_with_poi = []
         self.poi_handled = 0
