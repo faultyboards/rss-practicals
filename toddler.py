@@ -56,7 +56,7 @@ class Toddler:
         while dist_from_centerline > epsilon:
             angle_turned += self.motion.turn(
                 -dist_from_centerline * disp_to_angle_mul)
-            poi_position = self.vision.get_poi_position()
+            poi_position, _ = self.vision.get_poi_location()
             dist_from_centerline = poi_position[0] - self.vision.centerline
 
         # Heading towards POI -> Now walk until you are touching it
@@ -159,7 +159,7 @@ class Toddler:
 
             # Main loop
             # Check for poi
-            poi_position = self.vision.get_poi_position()
+            poi_position, _ = self.vision.get_poi_location()
             # Decide what to do
             self.poi_decide_what_to_do(poi_position)
             # Progress on the track
