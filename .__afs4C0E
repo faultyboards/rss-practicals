@@ -10,9 +10,11 @@ class Motors:
         self.state['DC']['current'] = self.state['DC']['initial']
         self.state['servo']['current'] = self.state['servo']['initial']
         self.state['servo']['engaged'] = False
+        self.state['DC']['direction_skew'] = None
 
         # Setup constants
         self.motor_pwr_multiplier = (0.9, -0.9)
+        self.direction_skew_multiplier = (0.1, 0.1)
 
         self.servo_seconds_per_degree = 0.02
         self.last_servo_change = None
@@ -20,27 +22,51 @@ class Motors:
         self.motions = {'forward': (100, 100), 'backward': (-100, -100),
                         'right': (-100, 100), 'left': (100, -100)}
 
+    def apply_direction_skew(self, heading, dir_skew=None):
+        '''
+        Skews the direction of motion in faviour of turning more right
+        (positive skew) or left (negative skew).
+        '''
+        if dir_skew == 'left':
+            print('skew left')
+            self.state['DC']['direction_skew'] = (5 ,-100)
+        elif dir_skew == 'right':
+            print('skew right')
+            self.state['DC']['direction_skew'] = (100 ,-5)
+        else:
+            print('no skew')
+            self.state['DC']['direction_skew'] = None
+        if self.state['DC']['direction_skew'] is not None:
+            if heading == 'backward':
+                self.state['DC']['direction_skew'][0] *= -1
+                self.state['DC']['direction_skew'][1] *= -1
+
     def apply_mult(self, motor_setting):
-        return (self.motor_pwr_multiplier[0] * motor_setting[0],
-                self.motor_pwr_multiplier[1] * motor_setting[1])
+        if self.state['DC']['direction_skew'] is not None:
+            return self.state['DC']['direction_skew']
+        else:
+            return (self.motor_pwr_multiplier[0] * motor_setting[0],
+                    self.motor_pwr_multiplier[1] * motor_setting[1])
 
     def full_on(self, motion='forward', how_long=None):
+        self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
         fullon = self.apply_mult(self.motions[motion])
         old_state = self.state['DC']['current']
         self.state['DC']['current'] = fullon
+        print('set motors: {}'.format(fullon))
         if old_state != self.state['DC']['current']:
             self.IO.setMotors(fullon[0], fullon[1])
             if how_long is not None:
                 time.sleep(how_long)
                 self.state['DC']['current'] = old_state
                 self.IO.setMotors(old_state[0], old_state[1])
-        self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
 
     def stop(self):
         self.IO.setMotors(0, 0)
-        self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
-        time.sleep(0.5)
+        self.apply_direction_skew(0)
+        time.sleep(1)
         self.state['DC']['current'] = (0, 0)
+        self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
 
     def enable_servo(self):
         self.IO.servoEngage()

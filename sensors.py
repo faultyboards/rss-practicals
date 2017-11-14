@@ -70,6 +70,7 @@ class Sensors:
         samples_no = 1000
         readings = np.empty(samples_no)
         for i in range(samples_no):
+            self.update_readings(self, type='analogue')
             readings[i] = self.analogue_readings[self.port['ir'][sensor_loc]]
         r_med = np.median(readings)
         r_std = readings.std()

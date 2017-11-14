@@ -105,7 +105,7 @@ class Motion():
         to a callback function to be evaulated periodically (True result stops
         the motion).
 
-        If wall_following is set to a number the robot will actively try to
+        DEPRECATED If wall_following is set to a number the robot will actively try to
         keep a given distance from a wall on its left (negative values of
         'wall_following') or right (positive values for 'wall_following').
         'wall_following' should be in meters.
@@ -144,15 +144,6 @@ class Motion():
                 condition, reason = amount(self.sensors, amount_travelled)
             else:
                 condition = np.abs(amount) >= (time_now - start_time)
-
-            if wall_following is not None:
-                wall_dist = self.sensors.get_ir['right' if wall_following >= 0
-                                                else 'left']
-                error_percent = np.abs(
-                    wall_following - wall_dist) / wall_following
-                print(error_percent)
-
-                self.motors.apply_direction_skew(error_percent)
 
         self.motors.stop()
         if amount_type == 'callback':
@@ -199,13 +190,6 @@ class Motion():
             return amount_travelled, reason
         else:
             return amount_travelled
-
-    def move_along_wall(self, amount, wall_distance, amount_type='distance'):
-        '''
-        Like self.move() but tries to keep a constant distance from a wall on
-        its left (negative values of 'amount') or right (positive values for
-        'amount').
-        '''
 
     def set_antenna(self, angle, degree_type='radians'):
         if not self.servo_engaged:

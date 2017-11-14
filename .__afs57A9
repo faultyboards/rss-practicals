@@ -24,8 +24,6 @@ class Toddler:
 
         self.satellite_pos = np.array([-0.69, 0, 2.95])
         self.antenna_pos = np.array([-0.04, -0.09, 0.25])
-        self.curr_small_ang_dev = 0
-        self.old_wall_dist = None
         self.poi_size = 0.2  # TODO
         self.transmission_time = 10  # TODO
 
@@ -145,43 +143,43 @@ class Toddler:
             # it
             self.last_poi_position = poi_position
 
-    def correct_heading(self, dist_last_travelled, desired_wall_dist):
-        '''
-        Turn to attempt following the wall at roughly the same distance.
-        '''
-        curr_wall_meas = self.sensors.get_ir('right')
-        if self.old_wall_dist is None:
-            self.old_wall_dist = curr_wall_meas
-
-        # (from small-angle trig stuff)
-        curr_wall_dist = (curr_wall_meas * dist_last_travelled /
-                          (self.prev_wall_dist - curr_wall_dist))
-        self.curr_small_ang_dev = self.old_wall_dist - curr_wall_dist
-        correction_heading = curr_wall_dist - desired_wall_dist
-        print('Distance from the wall {} / {}'.format(curr_wall_dist, desired_wall_dist))
-        print('Correcting heading {} / {}'.format(heading_diff, correction_heading))
-        self.motion.turn(heading_diff + correction_heading)
-            
-    # It has its dedicated thread so you can keep block it.
+            # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
         while OK():
-            if self.wallwalker.current_segment >= \
-                    len(self.wallwalker._segment_info) or \
-                    self.poi_handled >= 3:
-                print('Finished')
-                while True:
-                    pass
-            # Main loop
-            # Check for poi
-            poi_position, _ = self.vision.get_poi_location()
-            # Decide what to do
-            self.poi_decide_what_to_do(poi_position)
-            # Progress on the track
-            dist_travelled = self.wallwalker.step()
-            self.correct_heading(dist_travelled, self.wallwalker.get_targ_wall_dist())
+            # self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
+            # if self.wallwalker.current_segment >= \
+            #         len(self.wallwalker._segment_info) or \
+            #         self.poi_handled >= 3:
+            #     print('Finished')
+            #     while True:
+            #         pass
+
+            # # Main loop
+            # # Check for poi
+            # poi_position, _ = self.vision.get_poi_location()
+            # # Decide what to do
+            # self.poi_decide_what_to_do(poi_position)
+            # # Progress on the track
+            # self.wallwalker.step()
+            pass
 
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
     def Vision(self, OK):
+        distance_to_go = 0.4
+        init_ir = self.sensors.get_ir('right')
+        print('init_ir: {}'.format(init_ir))
+        # time.sleep(2)
         while OK():
-            pass
+            # print(self.sensors.get_ir('right'))
+            print('moving forward')
+            # self.IO.setMotors(80, -90)
+            self.motors.full_on('forward', how_long=2)
+            self.motion.move(distance_to_go, amount_type='distance', wall_following=init_ir)
+            time.sleep(2)
+            # print('moving back')
+            # self.motion.move(-distance_to_go, amount_type='distance', wall_following=init_ir)
+            time.sleep(2)
+            self.IO.setMotors(0, 0)
+            while 1:
+                pass

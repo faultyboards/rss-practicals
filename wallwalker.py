@@ -66,7 +66,7 @@ class Wallwalker():
                                   2.15 - 0.75 - 0.2 - 0.3 / 2,
                                   1.,
                                   0,
-                                  0.75 / 2 - 0.13),
+                                  0.75 / 2 - self.robot_half_lenght),
                               1: (4.25 - 1.05 / 2 - 1.05 / 2,
                                   0.2,
                                   0.75 / 2 - self.robot_half_width,
@@ -74,7 +74,7 @@ class Wallwalker():
                                   1.05 / 2 + 2.15,
                                   1.,
                                   0,
-                                  1.05 / 2 - 0.13),
+                                  1.05 / 2 - self.robot_half_lenght),
                               2: (3.20 - 0.7 - 0.75 / 2,
                                   0.2,
                                   1.05 / 2 - self.robot_half_width,
@@ -172,7 +172,7 @@ class Wallwalker():
             self.distance_along = left_obst_finish_along
             self.misc_state = False
 
-        return True
+        return distance_travelled
 
     def generic_transition(self):
         _, _, _, _, _, _, _, transtion_backoff = self._segment_info[
@@ -227,8 +227,13 @@ class Wallwalker():
             x = self.distance_along - (0.3 / 2 + 0.2 + 0.5 + 1. / 2)
             y = self._segment_info[3][0] + 1.05 - 0.2 - 0.42 / 2
             th = 0
-
         return np.array([x, y, th])
+
+    def get_targ_wall_dist(self):
+        '''
+        Returns the current target wall distance.
+        '''
+        return self._segment_info[self.current_segment][2]
 
 
 if __name__ == "__main__":
