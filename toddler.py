@@ -153,17 +153,26 @@ class Toddler:
         if self.old_wall_dist is None:
             self.old_wall_dist = curr_wall_meas
 
-        # (from small-angle trig stuff)
-        curr_wall_dist = (curr_wall_meas * dist_last_travelled /
-                          (self.prev_wall_dist - curr_wall_dist))
-        self.curr_small_ang_dev = self.old_wall_dist - curr_wall_dist
-        correction_heading = curr_wall_dist - desired_wall_dist
-        print('Distance from the wall {} / {}'.format(curr_wall_dist, desired_wall_dist))
-        print('Correcting heading {} / {}'.format(heading_diff, correction_heading))
-        self.motion.turn(heading_diff + correction_heading)
+        curr_wall_dist = curr_wall_meas
+        self.curr_small_ang_dev = np.asin((curr_wall_dist - self.old_wall_dist) / dist_last_travelled)
+        correction_heading = np.atan((curr_wall_dist - desired_wall_dist) / self.wallwalker.get_step_size())
+        print('last_dist_travelled {}'.format(dist_last_travelled))
+        print('Distance from the wall {} / {} / {}'.format(self.old_wall_dist, curr_wall_dist, desired_wall_dist))
+        print('Correcting heading {} / {} / {}'.format(self.curr_small_ang_dev, correction_heading, self.curr_small_ang_dev + correction_heading))
+        self.motion.turn((self.curr_small_ang_dev + correction_heading) * 0.9)
+        self.old_wall_dist = curr_wall_dist
+
+    def bwait(self):
+        while not self.sensors.get_switch():
+            pass
             
     # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
+        self.motion.stop()
+        self.bwait()
+        # self.motion.move(0.115)
+        # self.motion.turn(90, 'degrees')
+        # self.bwait()
         while OK():
             if self.wallwalker.current_segment >= \
                     len(self.wallwalker._segment_info) or \
@@ -179,6 +188,8 @@ class Toddler:
             # Progress on the track
             dist_travelled = self.wallwalker.step()
             self.correct_heading(dist_travelled, self.wallwalker.get_targ_wall_dist())
+            self.bwait()
+            pass
 
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
