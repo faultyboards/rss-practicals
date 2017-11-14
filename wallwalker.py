@@ -4,7 +4,7 @@ import numpy as np
 def mtn_front_bumper_stop_cb_generator(travel_allowed,
                                        left_feature_thresh=None,
                                        threshold_dir='lower'):
-    def mtn_front_bumper_stop_cb_(sensors, amount_travelled):
+    def mtn_front_bumper_stop_cb(sensors, amount_travelled):
         '''
         The callback used in stopping motion.
         '''
@@ -23,6 +23,7 @@ def mtn_front_bumper_stop_cb_generator(travel_allowed,
             return False, 'ir_higher'
         else:
             return True, None
+    return mtn_front_bumper_stop_cb
 
 
 def mtn_simple_bumper(sensors, amount_travelled):
@@ -107,14 +108,14 @@ class Wallwalker():
         defined the robot shall progress by a step length defined for that
         segment.
         '''
-        if not self.seg_transition_due:
-            retval = self.generic_transition()
-        else:
-            retval = self.generic_step_with_left_hook()
         print('Seg: {}\tdistance along: {}\ttransition due: {}'.format(
             self.current_segment,
             self.distance_along,
             self.seg_transition_due))
+        if self.seg_transition_due:
+            retval = self.generic_transition()
+        else:
+            retval = self.generic_step_with_left_hook()
         return retval
 
     def unstep(self, step_length=None):
@@ -144,7 +145,7 @@ class Wallwalker():
         # In this step misc_state means if we are already in the corridor
         if self.misc_state is None:
             self.misc_state = False
-
+        print(segment_step_size)
         if self.distance_along < left_obst_along_thresh:
             # Ignore left ir until we exit the corridor
             mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size)
@@ -229,12 +230,17 @@ class Wallwalker():
             th = 0
         return np.array([x, y, th])
 
+    def get_step_size(self):
+        '''
+        Returns the current target wall distance.
+        '''
+        return self._segment_info[self.current_segment][1]
+
     def get_targ_wall_dist(self):
         '''
         Returns the current target wall distance.
         '''
         return self._segment_info[self.current_segment][2]
-
 
 if __name__ == "__main__":
     # TODO Segment prior initialization code
