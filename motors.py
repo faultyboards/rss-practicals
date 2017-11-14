@@ -51,11 +51,13 @@ class Motors:
                 time.sleep(how_long)
                 self.state['DC']['current'] = old_state
                 self.IO.setMotors(old_state[0], old_state[1])
+        self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
 
     def stop(self):
-        self.IO.setMotors(1, 1)
+        self.IO.setMotors(0, 0)
+        self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
         self.apply_direction_skew(0)
-        time.sleep(1)
+        time.sleep(0.5)
         self.state['DC']['current'] = (0, 0)
 
     def enable_servo(self):
