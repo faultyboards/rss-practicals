@@ -70,7 +70,7 @@ class Sensors:
         samples_no = 1000
         readings = np.empty(samples_no)
         for i in range(samples_no):
-            self.update_readings(self, type='analogue')
+            self.update_readings(type='analogue')
             readings[i] = self.analogue_readings[self.port['ir'][sensor_loc]]
         r_med = np.median(readings)
         r_std = readings.std()
@@ -78,7 +78,7 @@ class Sensors:
                                 if np.abs(r_med - reading) <= 2 * r_std]
         reading = np.median(readings_no_outliers)
         if not raw:
-            return self.ir_inv_dist_fnctn(1/reading)
+            return self.ir_inv_dist_fnctn(1./reading) / 100.
         else:
             return self.analogue_readings[self.port['ir'][sensor_loc]]
 
