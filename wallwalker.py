@@ -37,6 +37,7 @@ def mtn_simple_bumper(sensors, amount_travelled):
     '''
     Callback which stops only when the front bumper is bumped.
     '''
+    sensors.update_readings(type='digital')
     if sensors.get_whisker():
         return False, None
     else:
