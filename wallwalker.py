@@ -9,19 +9,25 @@ def mtn_front_bumper_stop_cb_generator(travel_allowed,
         The callback used in stopping motion.
         '''
         epsilon = 0.05
-        # reading = sensors.get_ir('left')
+        sensors.update_readings(type='both')
+        poi_sensors = sensors.get_poi_sensors()
         if sensors.get_whisker():
             return False, 'whisker'
+        elif poi_sensors:
+            if 'front' in poi_sensors:
+                reason = 'poi_front'
+            elif 
+                if 'left' in poi_sensors:
+                    reason += '_left'
+                if 'right' in poi_sensors:
+                    reason += '_right'
+            elif 'left' in poi_sensors:
+                reason = 'left'
+            elif 'right' in poi_sensors:
+                reason = 'right'
+            return False, reason
         elif amount_travelled >= travel_allowed:
             return False, 'distance'
-        # elif (left_feature_thresh is not None and
-        #       threshold_dir == 'lower' and
-        #       sensors.get_ir('left', method='fast') < left_feature_thresh - epsilon):
-        #     return False, 'ir_lower'
-        # elif (left_feature_thresh is not None and
-        #       threshold_dir == 'higher' and
-        #       sensors.get_ir('left', method='fast') >= left_feature_thresh + epsilon):
-        #     return False, 'ir_higher'
         else:
             return True, None
     return mtn_front_bumper_stop_cb
