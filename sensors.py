@@ -68,18 +68,37 @@ class Sensors:
 
     def get_ir(self, sensor_loc, raw=False, method='fast'):
         if method == 'fast':
-            samples_no = 1
+            samples_no = 250
         elif method == 'accurate':
-            samples_no = 7000
-        readings = np.empty(samples_no)
+            samples_no = 10000
+
+        if sensor_loc =='both':
+            readings = np.empty((samples_no, 2))
+        else:
+            readings = np.empty(samples_no)
+
         for i in range(samples_no):
             self.update_readings(type='analogue')
-            readings[i] = self.analogue_readings[self.port['ir'][sensor_loc]]
-        r_med = np.median(readings)
-        r_std = readings.std()
-        readings_no_outliers = [reading for reading in readings
-                                if np.abs(r_med - reading) <= 2 * r_std]
-        reading = np.mean(readings_no_outliers)
+            # sensor_loc = 'left' if sensor_loc == 'front' else sensor_loc
+            # sensor_loc = 'right' if sensor_loc == 'back' else sensor_loc
+            if sensor_loc =='both':
+                readings[i,0] = self.analogue_readings[self.port['ir']['right']]
+                readings[i,1] = self.analogue_readings[self.port['ir']['left']]
+            else:
+                readings[i] = self.analogue_readings[self.port['ir'][sensor_loc]]
+
+        if sensor_loc =='both':
+            r_med = np.median(readings, axis=0)
+            r_std = np.expand_dims(readings.std(axis=0), 1).T
+            readings_no_outliers = readings[(readings - r_med < 2 * r_std).sum(axis=1) > 0, :]
+            reading = np.mean(readings_no_outliers, axis=0)
+        else:
+            r_med = np.median(readings)
+            r_std = readings.std()
+            readings_no_outliers = [reading for reading in readings
+                                    if np.abs(r_med - reading) <= 2 * r_std]
+            reading = np.mean(readings_no_outliers)
+
         if not raw:
             return self.ir_inv_dist_fnctn(1./reading)
         else:
