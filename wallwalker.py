@@ -14,14 +14,14 @@ def mtn_front_bumper_stop_cb_generator(travel_allowed,
             return False, 'whisker'
         elif amount_travelled >= travel_allowed:
             return False, 'distance'
-        elif (left_feature_thresh is not None and
-              threshold_dir == 'lower' and
-              sensors.get_ir('left', method='fast') < left_feature_thresh - epsilon):
-            return False, 'ir_lower'
-        elif (left_feature_thresh is not None and
-              threshold_dir == 'higher' and
-              sensors.get_ir('left', method='fast') >= left_feature_thresh + epsilon):
-            return False, 'ir_higher'
+        # elif (left_feature_thresh is not None and
+        #       threshold_dir == 'lower' and
+        #       sensors.get_ir('left', method='fast') < left_feature_thresh - epsilon):
+        #     return False, 'ir_lower'
+        # elif (left_feature_thresh is not None and
+        #       threshold_dir == 'higher' and
+        #       sensors.get_ir('left', method='fast') >= left_feature_thresh + epsilon):
+        #     return False, 'ir_higher'
         else:
             return True, None
     return mtn_front_bumper_stop_cb
@@ -42,10 +42,10 @@ class Wallwalker():
     The class dealing with walking around the 1D reduction of the arena.
     '''
 
-    def __init__(self, sensors, motion):
-        self.sensors = sensors
-        self.motion = motion
-
+    def __init__(self, parent):
+        self.sensors = parent.sensors
+        self.motion = parent.motion
+        self.parent = parent
         self.grid_res = 0.1
         self.seg_f_n = 'segment_data.pickle'
         self.current_segment = 0
@@ -120,6 +120,11 @@ class Wallwalker():
             self.distance_along,
             self.get_segment_len(),
             self.seg_transition_due))
+        # print('light: f:{}\tr:{}\tl:{}\tr:{}'.format(self.sensors.get_light('front', raw=True),
+        #                                              self.sensors.get_light('rear', raw=True),
+        #                                              self.sensors.get_light('left', raw=True),
+        #                                              self.sensors.get_light('right', raw=True)))
+        # print('dist {} angl {}'.format(self.parent.wall_dist(), self.parent.wall_angle() * 180 / np.pi))
         if self.seg_transition_due:
             retval = self.generic_transition()
         else:
