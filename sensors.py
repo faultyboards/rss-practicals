@@ -24,7 +24,7 @@ class Sensors:
                                 'rear': {'black': 0, 'reflective': 25},
                                 'left': {'black': 0, 'reflective': 25},
                                 'right': {'black': 0, 'reflective': 25}}
-        self.ir_inv_dist_fnctn = np.poly1d([5.69443841e+05, 7.85502872e+02, 9.16587752e+00])
+        self.ir_inv_dist_fnctn = np.poly1d([-3.38526873e+10, 1.43660335e+09, -1.87399879e+07, 1.04674902e+05, -1.85540076e+02, 1.86315734e-01])
         self.sonar_dist_mltpl = [.01, 0.076]
 
         # for storing most recent sensor readings
@@ -67,7 +67,7 @@ class Sensors:
             return self.analogue_readings[self.port['sonar']]
 
     def get_ir(self, sensor_loc, raw=False):
-        samples_no = 1000
+        samples_no = 15000
         readings = np.empty(samples_no)
         for i in range(samples_no):
             self.update_readings(type='analogue')
@@ -76,9 +76,9 @@ class Sensors:
         r_std = readings.std()
         readings_no_outliers = [reading for reading in readings
                                 if np.abs(r_med - reading) <= 2 * r_std]
-        reading = np.median(readings_no_outliers)
+        reading = np.mean(readings_no_outliers)
         if not raw:
-            return self.ir_inv_dist_fnctn(1./reading) / 100.
+            return self.ir_inv_dist_fnctn(1./reading)
         else:
             return self.analogue_readings[self.port['ir'][sensor_loc]]
 
