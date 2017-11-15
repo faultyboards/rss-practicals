@@ -20,10 +20,10 @@ class Sensors:
         # define thresholds / multipliers for analogue sensors
         # Rear and side light sensor readings are NOT reliable
         self.whskr_on_state = {'left': 1, 'right': 1}
-        self.light_threshold = {'front': {'black': 0, 'reflective': 120},
-                                'rear': {'black': 0, 'reflective': 25},
-                                'left': {'black': 0, 'reflective': 25},
-                                'right': {'black': 0, 'reflective': 25}}
+        self.light_threshold = {'front': 120,
+                                'rear': 255,
+                                'left': 45,
+                                'right': 25}
         self.ir_inv_dist_fnctn = np.poly1d([-3.38526873e+10, 1.43660335e+09, -1.87399879e+07, 1.04674902e+05, -1.85540076e+02, 1.86315734e-01])
         self.sonar_dist_mltpl = [.01, 0.076]
 
@@ -68,7 +68,7 @@ class Sensors:
 
     def get_ir(self, sensor_loc, raw=False, method='fast'):
         if method == 'fast':
-            samples_no = 250
+            samples_no = 500
         elif method == 'accurate':
             samples_no = 10000
 
@@ -90,7 +90,7 @@ class Sensors:
         if sensor_loc =='both':
             r_med = np.median(readings, axis=0)
             r_std = np.expand_dims(readings.std(axis=0), 1).T
-            readings_no_outliers = readings[(readings - r_med < 2 * r_std).sum(axis=1) > 0, :]
+            readings_no_outliers = readings[(readings - r_med <= 2 * r_std).sum(axis=1) > 0, :]
             reading = np.mean(readings_no_outliers, axis=0)
         else:
             r_med = np.median(readings)
@@ -108,7 +108,7 @@ class Sensors:
         if not raw:
             return ('poi' if
                     self.analogue_readings[self.port['light'][sensor_loc]] >
-                    self.light_threshold[sensor_loc]['reflective']
+                    self.light_threshold[sensor_loc]
                     else 'floor')
         else:
             return self.analogue_readings[self.port['light'][sensor_loc]]
