@@ -1,4 +1,5 @@
 import copy
+import csv
 import glob
 import time
 
@@ -33,7 +34,7 @@ class Vision:
 
         return self.IO.cameraRead()
 
-    def get_poi_location(self, frame=None, n=5, debug=False):
+    def get_poi_location(self, frame=None, n=5, debug=False, relevance_threshold=0.5):
         if frame is not None:
             frame = self.grab_image(n)
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -62,6 +63,7 @@ class Vision:
         max_area = 0
         max_bound_rect = None
         max_contours_id = None
+        max_moments = None
         areas = []
 
         start = time.time()
@@ -72,9 +74,13 @@ class Vision:
             areas.append(cnt_area)
 
             if cnt_area > max_area:
-                max_area = cnt_area
-                max_bound_rect = bound_rect
-                max_contours_id = i
+                moments = cv2.moments(bound_rect)
+                # prevents successive division by zero
+                if moments["m00"] > 0:
+                    max_moments = moments
+                    max_area = cnt_area
+                    max_bound_rect = bound_rect
+                    max_contours_id = i
 
         if debug:
             print("contours localization took: {}".format(time.time() - start))
@@ -82,24 +88,26 @@ class Vision:
         if not max_bound_rect:
             return None, None
 
+        # computes the mean area among all the recognized contours
         mean_area = np.mean(areas)
 
-        if np.abs(max_area - mean_area) > 0.5:
-            # return the centre of the POI in the camera frame
-            moments = cv2.moments(max_bound_rect)
-
-            cx = int(moments["m10"] / moments["m00"])
-            cy = int(moments["m01"] / moments["m00"])
+        # if the difference between the maximum area and the mean is over 0.5
+        # we can see a contours whose area is reasonably bigger than the average contours area in the given image
+        if np.abs(max_area - mean_area) > relevance_threshold:
+            cx = int(max_moments["m10"] / max_moments["m00"])
+            cy = int(max_moments["m01"] / max_moments["m00"])
             self._poi_position = (cx, cy)
 
-            poi_contours = np.zeros_like(poi_img_canny)
-            cv2.drawContours(poi_contours, contours0, max_contours_id, (150, 0, 255))
+            # draw contours around the POI location if debug flag is enabled
+            if debug:
+                poi_contours = np.zeros_like(poi_img_canny)
+                cv2.drawContours(poi_contours, contours0, max_contours_id, (150, 0, 255))
 
-            cv2.rectangle(poi_contours, (max_bound_rect[0], max_bound_rect[1]),
-                          (max_bound_rect[0] + max_bound_rect[2], max_bound_rect[1] + max_bound_rect[3]),
-                          (150, 0, 255), 2)
+                cv2.rectangle(poi_contours, (max_bound_rect[0], max_bound_rect[1]),
+                              (max_bound_rect[0] + max_bound_rect[2], max_bound_rect[1] + max_bound_rect[3]),
+                              (150, 0, 255), 2)
 
-            return self._poi_position, moments
+            return self._poi_position, max_moments
 
         return None, None
 
@@ -121,16 +129,6 @@ def compute_error_matrix(m, central_value_method="mean"):
     m_centered = np.where(m > 148, np.sqrt(np.square(m - np.expand_dims(central_value, axis=1))), np.zeros_like(m))
 
     return m_centered
-
-
-data = {
-    "h_lower": 90,
-    "s_lower": 71,
-    "v_lower": 235,
-    "h_upper": 110,
-    "s_upper": 81,
-    "v_upper": 255
-}
 
 
 def vision_test2():
@@ -204,6 +202,28 @@ def vision_test2():
         cv2.destroyAllWindows()
 
 
+data = {
+    "h_lower": 90,
+    "s_lower": 71,
+    "v_lower": 235,
+    "h_upper": 110,
+    "s_upper": 81,
+    "v_upper": 255
+}
+
+
+def reset_data_values():
+    global data
+    data = {
+        "h_lower": 90,
+        "s_lower": 71,
+        "v_lower": 235,
+        "h_upper": 110,
+        "s_upper": 81,
+        "v_upper": 255
+    }
+
+
 def check_threshold():
     def _check_threshold(frame_filename):
         frame = cv2.imread(frame_filename)
@@ -224,6 +244,7 @@ def check_threshold():
 
         def change_h_lower_param(x):
             global data
+
             data["h_lower"] = x
             poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
             poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
@@ -233,7 +254,6 @@ def check_threshold():
 
         def change_s_lower_param(x):
             global data
-
             data["s_lower"] = x
 
             poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
@@ -244,7 +264,6 @@ def check_threshold():
 
         def change_v_lower_param(x):
             global data
-
             data["v_lower"] = x
             poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
             poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
@@ -265,7 +284,6 @@ def check_threshold():
 
         def change_s_upper_param(x):
             global data
-
             data["s_upper"] = x
 
             poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
@@ -276,7 +294,6 @@ def check_threshold():
 
         def change_v_upper_param(x):
             global data
-
             data["v_upper"] = x
 
             poi_color_lower = np.array([data["h_lower"], data["s_lower"], data["v_lower"]], dtype=np.uint8)
@@ -296,17 +313,27 @@ def check_threshold():
 
         cv2.waitKey(-1)
         cv2.destroyAllWindows()
-
-        return data
+        global data
+        new_data = copy.deepcopy(data)
+        reset_data_values()
+        return new_data
 
     poi_thresholds = []
     for name in glob.glob("img/poi*.png"):
         print("Analyzing poi image {}".format(name))
-
         data = _check_threshold(name)
         poi_thresholds.append(data)
 
-    print(data)
+    with open("thresholds.txt", mode="w") as out_file:
+        writer = csv.writer(out_file)
+
+        keys = data.keys()
+
+        writer.writerow(keys)
+
+        for thresh in poi_thresholds:
+            writer.writerow([thresh[key] for key in keys])
+
 
 def vision_test():
     cap = cv2.VideoCapture(0)
