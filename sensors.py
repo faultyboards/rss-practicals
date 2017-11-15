@@ -66,8 +66,11 @@ class Sensors:
         else:
             return self.analogue_readings[self.port['sonar']]
 
-    def get_ir(self, sensor_loc, raw=False):
-        samples_no = 15000
+    def get_ir(self, sensor_loc, raw=False, method='fast'):
+        if method == 'fast':
+            samples_no = 1
+        elif method == 'accurate':
+            samples_no = 7000
         readings = np.empty(samples_no)
         for i in range(samples_no):
             self.update_readings(type='analogue')

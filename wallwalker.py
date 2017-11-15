@@ -9,17 +9,18 @@ def mtn_front_bumper_stop_cb_generator(travel_allowed,
         The callback used in stopping motion.
         '''
         epsilon = 0.05
+        # reading = sensors.get_ir('left')
         if sensors.get_whisker():
             return False, 'whisker'
         elif amount_travelled >= travel_allowed:
             return False, 'distance'
         elif (left_feature_thresh is not None and
               threshold_dir == 'lower' and
-              sensors.get_ir('left') < left_feature_thresh - epsilon):
+              sensors.get_ir('left', method='fast') < left_feature_thresh - epsilon):
             return False, 'ir_lower'
         elif (left_feature_thresh is not None and
               threshold_dir == 'higher' and
-              sensors.get_ir('left') >= left_feature_thresh + epsilon):
+              sensors.get_ir('left', method='fast') >= left_feature_thresh + epsilon):
             return False, 'ir_higher'
         else:
             return True, None
@@ -58,42 +59,48 @@ class Wallwalker():
         self.motion_callback = None
 
         self.robot_half_lenght = 0.14  # TODO
-        self.robot_half_width = 0.13  # TODO
+        self.robot_half_width = 0.12  # TODO
 
-        self._segment_info = {0: (2.15 - 0.2 - 0.3 / 2 - 0.65 / 2,
-                                  0.2,
-                                  1.05 / 2 - self.robot_half_width,
+        self.corr_width_1 = 0.98
+        self.corr_width_2 = 0.8
+        self.corr_width_3 = 1.07
+        self.corr_width_4 = 1.03
+        self.corr_width_1 = 0.9
+
+        self._segment_info = {0: (2.15 - 0.2 - 0.3 / 2 - self.corr_width_2 / 2,
+                                  0.35,
+                                  self.corr_width_1 / 2 - self.robot_half_width,
                                   2.15 - 0.75 - 0.16 - 0.2 - 0.3 / 2,
                                   2.15 - 0.75 - 0.2 - 0.3 / 2,
                                   1.,
                                   0,
                                   0.75 / 2 - self.robot_half_lenght),
-                              1: (4.25 - 1.05 / 2 - 1.05 / 2,
-                                  0.2,
-                                  0.75 / 2 - self.robot_half_width,
+                              1: (4.25 - self.corr_width_1 / 2 - self.corr_width_3 / 2,
+                                  0.35,
+                                  self.corr_width_2 / 2 - self.robot_half_width,
                                   1.05 / 2,
                                   1.05 / 2 + 2.15,
                                   1.,
                                   0,
                                   1.05 / 2 - self.robot_half_lenght),
-                              2: (3.20 - 0.7 - 0.75 / 2,
-                                  0.2,
-                                  1.05 / 2 - self.robot_half_width,
+                              2: (3.20 - 0.7 - self.corr_width_2 / 2,
+                                  0.35,
+                                  self.corr_width_3 / 2 - self.robot_half_width,
                                   2.25 - 0.75 / np.sqrt(3),
                                   2.25,
                                   2.,
                                   1.,
                                   0.05),
                               3: (2.6 - 0.4,
-                                  0.2,
-                                  1. / 2 - self.robot_half_width,
+                                  0.35,
+                                  self.corr_width_4 / 2 - self.robot_half_width,
                                   1.05 / 2,
                                   1.05 / 2 + 0.75,
                                   1.,
                                   1.,
                                   0.3),
                               3: (1.5,
-                                  0.2,
+                                  0.35,
                                   None,
                                   None,
                                   None,
@@ -108,9 +115,10 @@ class Wallwalker():
         defined the robot shall progress by a step length defined for that
         segment.
         '''
-        print('Seg: {}\tdistance along: {}\ttransition due: {}'.format(
+        print('Seg: {}\tdistance along: {}/{}\ttransition due: {}'.format(
             self.current_segment,
             self.distance_along,
+            self.get_segment_len(),
             self.seg_transition_due))
         if self.seg_transition_due:
             retval = self.generic_transition()
@@ -145,24 +153,28 @@ class Wallwalker():
         # In this step misc_state means if we are already in the corridor
         if self.misc_state is None:
             self.misc_state = False
-        print(segment_step_size)
-        if self.distance_along < left_obst_along_thresh:
-            # Ignore left ir until we exit the corridor
-            mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size)
-        elif self.misc_state:
-            mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size,
-                                                        left_obst_dist_thresh,
-                                                        threshold_dir='lower')
-        else:
-            mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size,
-                                                        left_obst_dist_thresh,
-                                                        threshold_dir='higher')
+
+        segment_step_size = np.min([segment_step_size, segment_length - self.distance_along])
+
+        # if self.distance_along < left_obst_along_thresh:
+        #     # Ignore left ir until we exit the corridor
+        #     mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size)
+        # elif self.misc_state:
+        #     mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size,
+        #                                                 left_obst_dist_thresh,
+        #                                                 threshold_dir='higher')
+        # else:
+        #     mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size,
+        #                                                 left_obst_dist_thresh,
+        #                                                 threshold_dir='lower')
+        mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size)
 
         distance_travelled, reason = self.motion.move(mtn_cb,
                                                       'callback',
                                                       distance_from_wall)
 
         self.distance_along += distance_travelled
+        print('Stopping because of {} after having traversed {}'.format(reason, distance_travelled))
 
         if reason == 'whisker' or self.distance_along >= segment_length:
             self.seg_transition_due = True
@@ -180,6 +192,7 @@ class Wallwalker():
             self.current_segment]
         if transtion_backoff is not None:
             self._transition_bump_n_turn(transtion_backoff)
+            self.seg_transition_due = False
             return True
         else:
             return False
@@ -192,9 +205,9 @@ class Wallwalker():
             self.motion.move(mtn_simple_bumper, 'callback')
 
         # Back off
-        self.motion(backward_move)
+        self.motion.move(backward_move)
 
-        self.turn(-90, 'degrees')
+        self.motion.turn(-90, 'degrees')
 
         if next_segment is None:
             self.current_segment += 1
@@ -241,6 +254,12 @@ class Wallwalker():
         Returns the current target wall distance.
         '''
         return self._segment_info[self.current_segment][2]
+
+    def get_segment_len(self):
+        '''
+        Returns the current segment's length.
+        '''
+        return self._segment_info[self.current_segment][0]
 
 if __name__ == "__main__":
     # TODO Segment prior initialization code

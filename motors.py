@@ -12,7 +12,7 @@ class Motors:
         self.state['servo']['engaged'] = False
 
         # Setup constants
-        self.motor_pwr_multiplier = (0.9, -0.9)
+        self.motor_pwr_multiplier = (1., -1.)
 
         self.servo_seconds_per_degree = 0.02
         self.last_servo_change = None

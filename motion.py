@@ -87,7 +87,7 @@ class Motion():
             self.last_hall_reading_time = time_now
 
             self.hall_timer = time_now
-            print('Hall fall - {}'.format(self.hall_count))
+            # print('Hall fall - {}'.format(self.hall_count))
 
         self.hall_reading_prev = hall_reading
 
@@ -202,3 +202,6 @@ class Motion():
             pass
 
         self.motors.set_servo(angle)
+
+    def stop(self):
+        self.motors.stop()

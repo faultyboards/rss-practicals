@@ -29,6 +29,8 @@ class Toddler:
         self.poi_size = 0.2  # TODO
         self.transmission_time = 10  # TODO
 
+        self.dist_since_being_accurate = 0
+
         self.segs_with_poi = []
         self.poi_handled = 0
 
@@ -154,40 +156,90 @@ class Toddler:
             self.old_wall_dist = curr_wall_meas
 
         curr_wall_dist = curr_wall_meas
-        self.curr_small_ang_dev = np.asin((curr_wall_dist - self.old_wall_dist) / dist_last_travelled)
-        correction_heading = np.atan((curr_wall_dist - desired_wall_dist) / self.wallwalker.get_step_size())
-        print('last_dist_travelled {}'.format(dist_last_travelled))
-        print('Distance from the wall {} / {} / {}'.format(self.old_wall_dist, curr_wall_dist, desired_wall_dist))
-        print('Correcting heading {} / {} / {}'.format(self.curr_small_ang_dev, correction_heading, self.curr_small_ang_dev + correction_heading))
-        self.motion.turn((self.curr_small_ang_dev + correction_heading) * 0.9)
+        minimum_dist_to_travel = 0.1
+
+        if dist_last_travelled > minimum_dist_to_travel:
+            self.curr_small_ang_dev = np.arcsin((curr_wall_dist - self.old_wall_dist) / dist_last_travelled)
+            correction_heading = np.arctan((curr_wall_dist - desired_wall_dist) / self.wallwalker.get_step_size())
+            print('last_dist_travelled {}'.format(dist_last_travelled))
+            print('Distance from the wall {} / {} / {}'.format(self.old_wall_dist, curr_wall_dist, desired_wall_dist))
+            print('Correcting heading {} / {} / {}'.format(self.curr_small_ang_dev, correction_heading, self.curr_small_ang_dev + correction_heading))
+            self.motion.turn((self.curr_small_ang_dev + correction_heading) * 0.9)
+        else:
+            print('Travelled for a shor distance -> Dont correct heading fully')
         self.old_wall_dist = curr_wall_dist
 
+    def correct_heading2(self, dist_last_travelled, desired_wall_dist):
+        '''
+        Turn to attempt following the wall at roughly the same distance.
+        2nd method
+        '''
+        curr_wall_meas = self.sensors.get_ir('right', method='accurate')
+        allowed_wall_error = 0.1
+        wall_error = curr_wall_meas - desired_wall_dist
+        self.dist_since_being_accurate += dist_last_travelled
+        print('dist: {} / {}, error {}%'.format(curr_wall_meas, desired_wall_dist, np.abs(wall_error) / desired_wall_dist))
+        if np.abs(wall_error) / desired_wall_dist >= allowed_wall_error:
+            print('correcting heading')
+            angl_to_straight = np.arcsin(wall_error / self.dist_since_being_accurate)
+            dist_along_wall_since_last_corr = self.dist_since_being_accurate * np.cos(angl_to_straight)
+            dist_along_wall_to_go = self.wallwalker.get_segment_len() - dist_along_wall_since_last_corr
+            angl_to_correct = np.arctan(wall_error / dist_along_wall_to_go)
+            print('angl_to_straight {}\tdist_along_wall_since_last_corr {}\tdist_along_wall_to_go {}\tangl_to_correct {}'.format(angl_to_straight, dist_along_wall_since_last_corr, dist_along_wall_to_go, angl_to_correct))
+            self.motion.turn(angl_to_straight + angl_to_correct)
+        elif np.abs(wall_error) / desired_wall_dist < allowed_wall_error / 10:
+            self.dist_since_being_accurate = 0
+
+    def correct_heading3(self, dist_last_travelled, desired_wall_dist):
+        '''
+        Turn to attempt following the wall at roughly the same distance.
+        2nd method
+        '''
+        curr_wall_meas = self.sensors.get_ir('right', method='accurate')
+        allowed_wall_error = 0.1
+        wall_error = curr_wall_meas - desired_wall_dist
+        self.dist_since_being_accurate += dist_last_travelled
+        print('dist: {} / {}, error {}%'.format(curr_wall_meas, desired_wall_dist, np.abs(wall_error) / desired_wall_dist))
+        if np.abs(wall_error) / desired_wall_dist >= allowed_wall_error:
+            print('correcting heading')
+            angl_to_straight = np.arcsin(wall_error / self.dist_since_being_accurate)
+            dist_along_wall_since_last_corr = self.dist_since_being_accurate * np.cos(angl_to_straight)
+            dist_along_wall_to_go = self.wallwalker.get_segment_len() - dist_along_wall_since_last_corr
+            angl_to_correct = np.arctan(wall_error / dist_along_wall_to_go)
+            print('angl_to_straight {}\tdist_along_wall_since_last_corr {}\tdist_along_wall_to_go {}\tangl_to_correct {}'.format(angl_to_straight, dist_along_wall_since_last_corr, dist_along_wall_to_go, angl_to_correct))
+            self.motion.turn(angl_to_straight + angl_to_correct)
+        elif np.abs(wall_error) / desired_wall_dist < allowed_wall_error / 10:
+            self.dist_since_being_accurate = 0
+
     def bwait(self):
-        while not self.sensors.get_switch():
-            pass
-            
+        # while not self.sensors.get_switch():
+        #     pass
+        raw_input('Press Enter to proceed')
+
     # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
         self.motion.stop()
         self.bwait()
         # self.motion.move(0.115)
         # self.motion.turn(90, 'degrees')
-        # self.bwait()
+        print(self.sensors.get_ir('right', method='accurate'))
+        self.bwait()
         while OK():
             if self.wallwalker.current_segment >= \
                     len(self.wallwalker._segment_info) or \
                     self.poi_handled >= 3:
                 print('Finished')
-                while True:
-                    pass
+                self.bwait()
             # Main loop
             # Check for poi
-            poi_position, _ = self.vision.get_poi_location()
-            # Decide what to do
-            self.poi_decide_what_to_do(poi_position)
+            # poi_position, _ = self.vision.get_poi_location()
+            # # Decide what to do
+            # self.poi_decide_what_to_do(poi_position)
             # Progress on the track
             dist_travelled = self.wallwalker.step()
-            self.correct_heading(dist_travelled, self.wallwalker.get_targ_wall_dist())
+            if not self.wallwalker.seg_transition_due:
+                self.bwait()
+                self.correct_heading(dist_travelled, self.wallwalker.get_targ_wall_dist())
             self.bwait()
             pass
 
@@ -196,3 +248,5 @@ class Toddler:
     def Vision(self, OK):
         while OK():
             pass
+            # print(self.sensors.get_ir('right', raw=True))
+            # time.sleep(0.3)
