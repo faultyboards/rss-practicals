@@ -40,21 +40,25 @@ class Motion():
     navigation, etc.
     '''
 
-    def __init__(self, IO, sensors=None, motors=None):
+    def __init__(self, IO, parent):
         # Multiplier dealing with how the state of the battery affects
         # distance-travelled estimates
 
         self.avg_speed = 0.0825  # initial value assumes average / full battery
         self.IO = IO
-        self.sensors = Sensors(self.IO) if sensors is None else sensors
-        self.motors = Motors(self.IO) if motors is None else motors
+        self.parent = parent
+        self.sensors = self.parent.sensors
+        self.motors = self.parent.motors
         self.motors.enable_servo()
 
         self.hall_trig_dist = 0.135675
+        self.straight_turn_hall_ratio = 1.9208672443650385
         self.hall_timer = None
         self.hall_count = 0
         self.last_hall_reading_time = None
         self.hall_reading_prev = False
+
+        self.steer_dist_thresh = 0
 
         self.angle_time_multiplier = 0.18465
 
@@ -77,7 +81,7 @@ class Motion():
             if self.hall_count > 1:
                 new_avg_speed = (self.hall_trig_dist /
                                  (time_now - self.hall_timer))
-                print('new_avg_speed: {}'.format(new_avg_speed))
+                # print('new_avg_speed: {}'.format(new_avg_speed))
                 if (np.abs(new_avg_speed - self.avg_speed) >
                         0.2 * self.avg_speed):
                     print(
@@ -115,14 +119,38 @@ class Motion():
         '''
         self._hall_handler_reset()
         start_time = time.time()
+        start_time2 = time.time()
         amount_travelled = 0
         travel_time_pre_hall = 0
         travel_time_since_hall = 0
 
-        self.motors.full_on('forward' if amount > 0 else 'backward')
+        direction = 'forward' if amount > 0 else 'backward'
 
         condition = True
+        i = 0
+        steer_dir2 = False
         while condition:
+            if wall_following is not None:
+                wall_dist_err = self.parent.wall_dist() - wall_following
+
+                angl_positive = self.parent.wall_angle() > 0
+                too_far_from_wall = wall_dist_err > 0
+
+                if angl_positive and not too_far_from_wall:
+                    steer_dir = '_left'
+                    # print('_left')
+                elif not angl_positive and too_far_from_wall:
+                    steer_dir = '_right'
+                    # print('_right')
+                else:
+                    steer_dir = ''
+
+
+                going_where = (direction + steer_dir)
+                self.motors.full_on(going_where)
+            else:
+                self.motors.full_on(direction)
+
             self._hall_handler()
             time_now = time.time()
 
