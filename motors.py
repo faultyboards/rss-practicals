@@ -18,7 +18,9 @@ class Motors:
         self.last_servo_change = None
 
         self.motions = {'forward': (100, 100), 'backward': (-100, -100),
-                        'right': (-100, 100), 'left': (100, -100)}
+                        'right': (-100, 100), 'left': (100, -100),
+                        'forward_right': (5, 100), 'backward_right': (-5, -100),
+                        'forward_left': (100, 5), 'backward_left': (-100, -5)}
 
     def apply_mult(self, motor_setting):
         return (self.motor_pwr_multiplier[0] * motor_setting[0],
@@ -29,14 +31,17 @@ class Motors:
         old_state = self.state['DC']['current']
         self.state['DC']['current'] = fullon
         if old_state != self.state['DC']['current']:
+            print(fullon)
             self.IO.setMotors(fullon[0], fullon[1])
             if how_long is not None:
                 time.sleep(how_long)
                 self.state['DC']['current'] = old_state
+                print(old_state)
                 self.IO.setMotors(old_state[0], old_state[1])
         self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
 
     def stop(self):
+        print('stop')
         self.IO.setMotors(0, 0)
         self.IO._motorControlI2C.write(chr(2<<5|24|2<<1)+chr(0xff))
         time.sleep(0.5)

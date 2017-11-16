@@ -7,6 +7,11 @@ import numpy as np
 
 wall_lower_range = np.array([0, 50, 0], dtype=np.uint8)
 wall_upper_range = np.array([60, 200, 255], dtype=np.uint8)
+
+#poi_color_lower = np.array([0, 0, 225], dtype=np.uint8)
+#poi_color_upper = np.array([0, 0, 255], dtype=np.uint8)
+
+
 poi_color_lower = np.array([49, 17, 194], dtype=np.uint8)
 poi_color_upper = np.array([137, 133, 255], dtype=np.uint8)
 
@@ -34,8 +39,9 @@ class Vision:
         return self.IO.cameraRead()
 
     def get_poi_location(self, frame=None, n=5, debug=False):
-        if frame is not None:
+        if frame is None:
             frame = self.grab_image(n)
+
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         start = time.time()
         wall_img = cv2.inRange(hsv, wall_lower_range, wall_upper_range)
@@ -55,7 +61,6 @@ class Vision:
         start = time.time()
         poi_img_canny = cv2.Canny(poi_img, 10, 10)
         _, contours0, hierarchy = cv2.findContours(poi_img_canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
         if debug:
             print("Canny detection took: {}".format(time.time() - start))
 
@@ -88,8 +93,8 @@ class Vision:
             # return the centre of the POI in the camera frame
             moments = cv2.moments(max_bound_rect)
 
-            cx = int(moments["m10"] / moments["m00"])
-            cy = int(moments["m01"] / moments["m00"])
+            cx = float(moments["m10"] / moments["m00"])
+            cy = float(moments["m01"] / moments["m00"])
             self._poi_position = (cx, cy)
 
             poi_contours = np.zeros_like(poi_img_canny)
@@ -99,6 +104,10 @@ class Vision:
                           (max_bound_rect[0] + max_bound_rect[2], max_bound_rect[1] + max_bound_rect[3]),
                           (150, 0, 255), 2)
 
+            
+
+            self.IO.imshow('frmaasdasdas', poi_contours)
+            self.IO.imshow('frm', frame)
             return self._poi_position, moments
 
         return None, None
@@ -147,10 +156,10 @@ def vision_test2():
     frame[wall_img_filtered > 150] = 0
     print("Wall removal took: {}".format(time.time() - start))
 
-    cv2.imshow("hsv", frame)
+    # cv2.imshow("hsv", frame)
 
     poi_img = cv2.inRange(hsv, poi_color_lower, poi_color_upper)
-    cv2.imshow("poi_img", poi_img)
+    # cv2.imshow("poi_img", poi_img)
 
     start = time.time()
     poi_img_canny = cv2.Canny(poi_img, 10, 10)
@@ -196,7 +205,7 @@ def vision_test2():
                       (max_bound_rect[0] + max_bound_rect[2], max_bound_rect[1] + max_bound_rect[3]),
                       (150, 0, 255), 2)
 
-        cv2.imshow("poi", poi_contours)
+        # cv2.imshow("poi", poi_contours)
         print(poi_position)
 
         cv2.waitKey(-1)
@@ -220,7 +229,7 @@ def check_threshold():
         print("Wall removal took: {}".format(time.time() - start))
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        cv2.imshow("frame", hsv)
+        # cv2.imshow("frame", hsv)
 
         def change_h_lower_param(x):
             global data
@@ -229,7 +238,7 @@ def check_threshold():
             poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
             img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-            cv2.imshow("frame", img)
+            # cv2.imshow("frame", img)
 
         def change_s_lower_param(x):
             global data
@@ -240,7 +249,7 @@ def check_threshold():
             poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
             img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-            cv2.imshow("frame", img)
+            # cv2.imshow("frame", img)
 
         def change_v_lower_param(x):
             global data
@@ -251,7 +260,7 @@ def check_threshold():
 
             img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
 
-            cv2.imshow("frame", img)
+            # cv2.imshow("frame", img)
 
         def change_h_upper_param(x):
             global data
@@ -261,7 +270,7 @@ def check_threshold():
             poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
             img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-            cv2.imshow("frame", img)
+            # cv2.imshow("frame", img)
 
         def change_s_upper_param(x):
             global data
@@ -272,7 +281,7 @@ def check_threshold():
             poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
             img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-            cv2.imshow("frame", img)
+            # cv2.imshow("frame", img)
 
         def change_v_upper_param(x):
             global data
@@ -283,7 +292,7 @@ def check_threshold():
             poi_color_upper = np.array([data["h_upper"], data["s_upper"], data["v_upper"]], dtype=np.uint8)
 
             img = cv2.inRange(hsv.copy(), poi_color_lower, poi_color_upper)
-            cv2.imshow("frame", img)
+            # cv2.imshow("frame", img)
 
         # {'s_lower': 20, 'h_lower': 41, 'v_upper': 255, 'v_lower': 187, 'h_upper': 171, 's_upper': 139}
         cv2.namedWindow('frame')
@@ -323,12 +332,12 @@ def vision_test():
         upper_range = np.array([189, 255, 255], dtype=np.uint8)
 
         cv2.namedWindow('frame')
-        cv2.imshow('frame', frame)
+        # cv2.imshow('frame', frame)
         cv2.resizeWindow('frame', 100, 100)
         mask = cv2.inRange(hsv, lower_range, upper_range)
 
         cv2.namedWindow('mask')
-        cv2.imshow('mask', mask)
+        # cv2.imshow('mask', mask)
         cv2.resizeWindow('mask', 100, 100)
 
         if np.mean(mask) > 0.5:

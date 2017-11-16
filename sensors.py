@@ -22,8 +22,8 @@ class Sensors:
         self.whskr_on_state = {'left': 1, 'right': 1}
         self.light_threshold = {'front': 120,
                                 'rear': 255,
-                                'left': 45,
-                                'right': 25}
+                                'left': 60,
+                                'right': 60}
         self.ir_inv_dist_fnctn = np.poly1d([-3.38526873e+10, 1.43660335e+09, -1.87399879e+07, 1.04674902e+05, -1.85540076e+02, 1.86315734e-01])
         self.sonar_dist_mltpl = [.01, 0.076]
 
@@ -68,7 +68,7 @@ class Sensors:
 
     def get_ir(self, sensor_loc, raw=False, method='fast'):
         if method == 'fast':
-            samples_no = 500
+            samples_no = 200
         elif method == 'accurate':
             samples_no = 10000
 
@@ -112,6 +112,13 @@ class Sensors:
                     else 'floor')
         else:
             return self.analogue_readings[self.port['light'][sensor_loc]]
+
+    def get_poi_sensors(self):
+        retval = []
+        for sensor in self.light_threshold:
+            if self.analogue_readings[self.port['light'][sensor]] > self.light_threshold[sensor]:
+                retval.append(sensor)
+        return retval
 
     def get_hall(self):
         return self.digital_readings[self.port['hall']]

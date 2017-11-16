@@ -2,8 +2,7 @@ import numpy as np
 
 
 def mtn_front_bumper_stop_cb_generator(travel_allowed,
-                                       left_feature_thresh=None,
-                                       threshold_dir='lower'):
+                                       poi_detection_disabled=True):
     def mtn_front_bumper_stop_cb(sensors, amount_travelled):
         '''
         The callback used in stopping motion.
@@ -11,20 +10,24 @@ def mtn_front_bumper_stop_cb_generator(travel_allowed,
         epsilon = 0.05
         sensors.update_readings(type='both')
         poi_sensors = sensors.get_poi_sensors()
+
+        if poi_sensors:
+            for sensor in poi_sensors:
+                print('{}:{}'.format(sensor, sensors.get_light(sensor, raw=True)))
+
         if sensors.get_whisker():
             return False, 'whisker'
-        elif poi_sensors:
+        elif not poi_detection_disabled and poi_sensors:
             if 'front' in poi_sensors:
                 reason = 'poi_front'
-            elif 
                 if 'left' in poi_sensors:
                     reason += '_left'
                 if 'right' in poi_sensors:
                     reason += '_right'
             elif 'left' in poi_sensors:
-                reason = 'left'
+                reason = 'poi_left'
             elif 'right' in poi_sensors:
-                reason = 'right'
+                reason = 'poi_right'
             return False, reason
         elif amount_travelled >= travel_allowed:
             return False, 'distance'
@@ -74,6 +77,8 @@ class Wallwalker():
         self.corr_width_4 = 1.03
         self.corr_width_1 = 0.9
 
+        self.poi_detected = False
+
         self._segment_info = {0: (2.15 - 0.2 - 0.3 / 2 - self.corr_width_2 / 2,
                                   0.35,
                                   self.corr_width_1 / 2 - self.robot_half_width,
@@ -106,7 +111,7 @@ class Wallwalker():
                                   1.,
                                   1.,
                                   0.3),
-                              3: (1.5,
+                              4: (1.5,
                                   0.35,
                                   None,
                                   None,
@@ -168,46 +173,35 @@ class Wallwalker():
 
         segment_step_size = np.min([segment_step_size, segment_length - self.distance_along])
 
-        # if self.distance_along < left_obst_along_thresh:
-        #     # Ignore left ir until we exit the corridor
-        #     mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size)
-        # elif self.misc_state:
-        #     mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size,
-        #                                                 left_obst_dist_thresh,
-        #                                                 threshold_dir='higher')
-        # else:
-        #     mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size,
-        #                                                 left_obst_dist_thresh,
-        #                                                 threshold_dir='lower')
-        mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size)
+        mtn_cb = mtn_front_bumper_stop_cb_generator(segment_step_size, poi_detection_disabled=self.poi_detected)
 
         distance_travelled, reason = self.motion.move(mtn_cb,
                                                       'callback',
                                                       distance_from_wall)
+
+        if reason[:3] == 'poi':
+            self.poi_detected = True
+        else:
+            self.poi_detected = False
 
         self.distance_along += distance_travelled
         print('Stopping because of {} after having traversed {}'.format(reason, distance_travelled))
 
         if reason == 'whisker' or self.distance_along >= segment_length:
             self.seg_transition_due = True
-        elif reason == 'ir_lower':
-            self.distance_along = left_obst_start_along
-            self.misc_state = True
-        elif reason == 'ir_higher':
-            self.distance_along = left_obst_finish_along
-            self.misc_state = False
 
-        return distance_travelled
+        return distance_travelled, reason
 
     def generic_transition(self):
         _, _, _, _, _, _, _, transtion_backoff = self._segment_info[
             self.current_segment]
         if transtion_backoff is not None:
             self._transition_bump_n_turn(transtion_backoff)
+            print('qwe')
             self.seg_transition_due = False
-            return True
+            return True, None
         else:
-            return False
+            return False, None
 
     def _transition_bump_n_turn(self, backward_move, next_segment=None):
         backward_move = -backward_move
@@ -218,8 +212,9 @@ class Wallwalker():
 
         # Back off
         self.motion.move(backward_move)
-
-        self.motion.turn(-90, 'degrees')
+        print('trunin')
+        qew = self.motion.turn(-90, 'degrees')
+        print('trunned {}'.format(qew))
 
         if next_segment is None:
             self.current_segment += 1

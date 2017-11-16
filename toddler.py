@@ -8,6 +8,7 @@ from wallwalker import Wallwalker
 
 import numpy as np
 import time
+import cv2
 
 __TODDLER_VERSION__ = "Best One"
 
@@ -18,8 +19,8 @@ class Toddler:
         self.IO = IO
         self.sensors = Sensors(self.IO)
         self.motors = Motors(self.IO)
-        self.motion = Motion(self.IO, self.sensors, self.motors)
-        self.wallwalker = Wallwalker(self.sensors, self.motion)
+        self.motion = Motion(self.IO, self)
+        self.wallwalker = Wallwalker(self)
         self.vision = Vision(self.IO)
 
         self.satellite_pos = np.array([-0.69, 0, 2.95])
@@ -33,6 +34,9 @@ class Toddler:
 
         self.segs_with_poi = []
         self.poi_handled = 0
+        
+        self.wall_readings = np.array([0, 0], dtype=np.float)
+        self.ir_sensor_distance = 0.165
 
     def cb_poi_light(sensors, distance_travelled):
         '''
@@ -105,7 +109,7 @@ class Toddler:
             bot_turn_deg -= np.pi
         else:
             ant_angl = np.pi - ant_angl
-
+        print('bot_turn_deg {}\t ant_trun {}'.format(bot_turn_deg, ant_angl))
         angle_turned = self.motion.turn(bot_turn_deg)
         self.motion.set_antenna(ant_angl)
         time.sleep(self.transmission_time)
@@ -216,37 +220,108 @@ class Toddler:
         #     pass
         raw_input('Press Enter to proceed')
 
+    def update_wall_readings(self):
+        new_wall_readings = self.sensors.get_ir('both', method='fast')
+        self.wall_readings[0] = new_wall_readings[0]
+        self.wall_readings[1] = new_wall_readings[1]
+
+    def wall_dist(self):
+        return self.wall_readings.mean()
+
+    def wall_angle(self):
+        return np.arcsin((self.wall_readings[1] - self.wall_readings[0]) / self.ir_sensor_distance)
+
     # It has its dedicated thread so you can keep block it.
     def Control(self, OK):
         self.motion.stop()
-        self.bwait()
+        # self.motion.move(0.3)
+        # self.motion.turn(90, 'degrees')
+        # self.bwait()
+        # name = 'light.log'
+        # f = open(name, 'w')
         # self.motion.move(0.115)
         # self.motion.turn(90, 'degrees')
-        print(self.sensors.get_ir('right', method='accurate'))
+        # print(self.sensors.get_ir('right', method='accurate'))
         self.bwait()
+        # self.wallwalker.seg_transition_due = False
+        self.wallwalker.current_segment = 3
+        # self.wallwalker.distance_along = 1.5
+        # i=0 
         while OK():
-            if self.wallwalker.current_segment >= \
-                    len(self.wallwalker._segment_info) or \
-                    self.poi_handled >= 3:
-                print('Finished')
-                self.bwait()
+            # print('f:{}\tr:{}\tl:{}\tr:{}\n'.format(self.sensors.get_light('front', raw=True),
+            #                                          self.sensors.get_light('rear', raw=True),
+            #                                          self.sensors.get_light('left', raw=True),
+            #                                          self.sensors.get_light('right', raw=True)))
+            # time.sleep(0.5)
+            # if self.sensors.get_switch():
+            #     print('blob')
+            #     time.sleep(1)
+            #     i += 1
+
+            # if i >= 3:
+            #     while 1:
+            #         pass
+            # if self.wallwalker.current_segment >= \
+            #         len(self.wallwalker._segment_info) or \
+            #         self.poi_handled >= 3:
+            #     print('Finished')
+            #     self.bwait()
             # Main loop
             # Check for poi
             # poi_position, _ = self.vision.get_poi_location()
             # # Decide what to do
             # self.poi_decide_what_to_do(poi_position)
             # Progress on the track
-            dist_travelled = self.wallwalker.step()
-            if not self.wallwalker.seg_transition_due:
-                self.bwait()
-                self.correct_heading(dist_travelled, self.wallwalker.get_targ_wall_dist())
-            self.bwait()
+            dist_travelled, reason_for_stop = self.wallwalker.step()
+            if reason_for_stop is not None:
+                if reason_for_stop[:3] == 'poi':
+                    print('poi_detected')
+                    self.wallwalker.distance_along += self.motion.move(0.2)
+                    self.poi_service(self.wallwalker.get_xy_th_estimate())
+            # if not self.wallwalker.seg_transition_due:
+            #     self.bwait()
+            #     self.correct_heading(dist_travelled, self.wallwalker.get_targ_wall_dist())
+            # self.bwait()
+
             pass
 
     # This is a callback that will be called repeatedly.
     # It has its dedicated thread so you can keep block it.
     def Vision(self, OK):
         while OK():
+            self.update_wall_readings()
+             # self.IO.imshow('sight', self.vision.grab_image())
+             # carp, _ = self.vision.get_poi_location()
+
+             # print(carp)
+
+            # self.bwait()
+            # self.motion.move(1)
+            # self.bwait()
+            # self.motion.move('forward', how_long=15)
+            # while 1:
+            #     pass
+            # while self.wall_readings[0] == 0:
+            #     pass
+
+
+            # print('Following the wall at {}m (angle {})'.format(self.wall_dist(), self.wall_angle() / np.pi * 180))
+            # self.bwait()
+            # self.motion.move(0.4, wall_following=self.wall_dist())
+            # self.bwait()
+
+        while OK():
+            # prep
+            # self.wallwalker.current_segment = 1
+            # self.wallwalker.distance_along = 0.6
+
+            # ################### CODE BEING TESTED #######################
+            # poi_travel, angle_turned, success = self.poi_go(poi_position)
+            # # Only do the antenna alignment stuff if we actually entered a
+            # # poi
+            # if success:
+            #     pos_est = self.get_pos_est(poi_travel, angle_turned)
+            #     self.poi_service(pos_est)
+            # self.poi_return(poi_travel, angle_turned)
+            ################### TEST END #######################
             pass
-            # print(self.sensors.get_ir('right', raw=True))
-            # time.sleep(0.3)

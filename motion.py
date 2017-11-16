@@ -58,7 +58,7 @@ class Motion():
         self.last_hall_reading_time = None
         self.hall_reading_prev = False
 
-        self.steer_dist_thresh = 0
+        self.steer_dist_thresh = 0.1
 
         self.angle_time_multiplier = 0.18465
 
@@ -127,19 +127,18 @@ class Motion():
         direction = 'forward' if amount > 0 else 'backward'
 
         condition = True
-        i = 0
-        steer_dir2 = False
         while condition:
             if wall_following is not None:
                 wall_dist_err = self.parent.wall_dist() - wall_following
 
                 angl_positive = self.parent.wall_angle() > 0
-                too_far_from_wall = wall_dist_err > 0
+                further_than_target_dist = wall_dist_err > 0
+                too_much_error = np.abs(wall_dist_err) > self.steer_dist_thresh
 
-                if angl_positive and not too_far_from_wall:
+                if not further_than_target_dist and (angl_positive or too_much_error):
                     steer_dir = '_left'
                     # print('_left')
-                elif not angl_positive and too_far_from_wall:
+                elif further_than_target_dist and (not angl_positive or too_much_error):
                     steer_dir = '_right'
                     # print('_right')
                 else:
