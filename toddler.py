@@ -24,7 +24,7 @@ class Toddler:
         self.vision = Vision(self.IO)
 
         self.satellite_pos = np.array([-0.69, 0, 2.95])
-        self.antenna_pos = np.array([-0.04, -0.09, 0.25])
+        self.antenna_pos = np.array([0, 0, 0.3])
         self.curr_small_ang_dev = 0
         self.old_wall_dist = None
         self.poi_size = 0.2  # TODO
@@ -91,7 +91,7 @@ class Toddler:
         robot_pos_3d = pos_est.copy()
         robot_orientation = robot_pos_3d[2]
         robot_pos_3d[2] = 0
-        r = self.satellite_pos - robot_pos_3d
+        r = self.satellite_pos - (robot_pos_3d + self.antenna_pos)
         r_f = np.concatenate([r[:2], np.zeros(1)])
 
         ant_angl = (np.pi / 2 -
@@ -109,11 +109,20 @@ class Toddler:
             bot_turn_deg -= np.pi
         else:
             ant_angl = np.pi - ant_angl
-        print('bot_turn_deg {}\t ant_trun {}'.format(bot_turn_deg, ant_angl))
-        angle_turned = self.motion.turn(bot_turn_deg)
+
+        if bot_turn_deg < -np.pi / 2:
+            bot_turn_deg += np.pi
+            ant_angl = np.pi - ant_angl
+        elif bot_turn_deg > np.pi / 2:
+            bot_turn_deg -= np.pi
+            ant_angl = np.pi - ant_angl
+
+        print('bot_turn_deg {}\t ant_trun {}'.format(bot_turn_deg / np.pi * 180,
+                                                     ant_angl / np.pi * 180))
+        self.motion.turn(bot_turn_deg)
         self.motion.set_antenna(ant_angl)
         time.sleep(self.transmission_time)
-        self.motion.turn(-angle_turned)
+        self.motion.turn(-bot_turn_deg)
 
     def poi_return(self, travel, angle_turned):
         '''
@@ -242,11 +251,32 @@ class Toddler:
         # self.motion.move(0.115)
         # self.motion.turn(90, 'degrees')
         # print(self.sensors.get_ir('right', method='accurate'))
-        self.bwait()
-        # self.wallwalker.seg_transition_due = False
-        self.wallwalker.current_segment = 3
-        # self.wallwalker.distance_along = 1.5
-        # i=0 
+        # self.bwait()
+        # self.wallwalker.seg_transition_due = True
+        # self.wallwalker.current_segment = 3
+        # # self.wallwalker.distance_along = 1.5
+        # # i=0 
+        # # self.motion.set_antenna(0)
+        # # self.bwait()
+        # # self.motion.set_antenna(np.pi/2)
+        # # self.bwait()
+        # # self.motion.set_antenna(np.pi)
+        # # self.bwait()
+        # self.wallwalker.current_segment = 1
+        # self.wallwalker.distance_along = 1.3
+        # self.poi_service(self.wallwalker.get_xy_th_estimate())
+        # self.bwait()
+        # self.wallwalker.current_segment = 2
+        # self.wallwalker.distance_along = 2
+        # self.poi_service(self.wallwalker.get_xy_th_estimate())
+        # self.bwait()
+        # self.wallwalker.current_segment = 3
+        # self.wallwalker.distance_along = 1.6
+        # self.poi_service(self.wallwalker.get_xy_th_estimate())
+        # self.bwait()
+
+
+
         while OK():
             # print('f:{}\tr:{}\tl:{}\tr:{}\n'.format(self.sensors.get_light('front', raw=True),
             #                                          self.sensors.get_light('rear', raw=True),

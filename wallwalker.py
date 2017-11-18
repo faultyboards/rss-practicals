@@ -97,7 +97,7 @@ class Wallwalker():
                                   1.05 / 2 - self.robot_half_lenght),
                               2: (3.20 - 0.7 - self.corr_width_2 / 2,
                                   0.35,
-                                  self.corr_width_3 / 2 - self.robot_half_width,
+                                  self.corr_width_3 / 2 - self.robot_half_width + 0.15,
                                   2.25 - 0.75 / np.sqrt(3),
                                   2.25,
                                   2.,
@@ -105,7 +105,7 @@ class Wallwalker():
                                   0.05),
                               3: (2.6 - 0.4,
                                   0.35,
-                                  self.corr_width_4 / 2 - self.robot_half_width,
+                                  self.corr_width_4 / 2 - self.robot_half_width + 0.1,
                                   1.05 / 2,
                                   1.05 / 2 + 0.75,
                                   1.,
@@ -197,7 +197,7 @@ class Wallwalker():
             self.current_segment]
         if transtion_backoff is not None:
             self._transition_bump_n_turn(transtion_backoff)
-            print('qwe')
+            # print('qwe')
             self.seg_transition_due = False
             return True, None
         else:

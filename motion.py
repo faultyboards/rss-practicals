@@ -5,7 +5,7 @@ from sensors import Sensors
 from motors import Motors
 
 SATELLITE_POS = [-0.69, 0, 2.95]
-ANTENNA_POS = [-0.04, -0.09, 0.25]
+ANTENNA_POS = [0, 0, 0.3]
 START_POS = [0., 0., 0.]
 
 
@@ -228,6 +228,7 @@ class Motion():
         elif degree_type == 'degrees':
             pass
 
+        angle = np.max([0, angle - 5])
         self.motors.set_servo(angle)
 
     def stop(self):
